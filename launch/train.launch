@@ -1,0 +1,15 @@
+<launch>
+  <arg name="device" default="" />
+  <machine name="hsrb46" address="hsrb.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
+  <machine name="hsrb80" address="hsrb80.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
+
+  <!-- publish audio data as wav format -->
+  <node machine="hsrb46" name="audio_capture" pkg="audio_capture" type="audio_capture" output="screen">
+    <param name="device" value="" />
+    <param name="format" value="wave" />
+    <param name="channels" value="4" />
+    <param name="depth" value="16" />
+    <param name="sample_rate" value="16000" />
+    <param name="device" value="$(arg device)" />
+  </node>
+</launch>
