@@ -3,7 +3,19 @@
   <machine name="hsrb46" address="hsrb.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
   <machine name="hsrb80" address="hsrb80.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
 
-  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+  <node machine="hsrb46" name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket">
+    <param name="authenticate" value="false" />
+    <param name="port" value="9090"/>
+    <param name="address" value=""/>
+    <param name="retry_startup_delay" value="5"/>
+    <param name="fragment_timeout" value="600"/>
+    <param name="delay_between_messages" value="0"/>
+    <param name="max_message_size" value="None"/>
+    <param name="topics_glob" value="[*]"/>
+    <param name="services_glob" value="[*]"/>
+    <param name="params_glob" value="[*]"/>
+    <param name="bson_only_mode" value="false"/>
+  </node>
 
   <!-- publish audio data as wav format -->
   <node machine="hsrb46" name="audio_capture" pkg="audio_capture" type="audio_capture" output="screen">
@@ -15,7 +27,7 @@
     <param name="device" value="$(arg device)" />
   </node>
 
-  <node name="ssl_bridge" pkg="sound_source_localization" type="bridge.py">
+  <node machine="hsrb46" name="ssl_bridge" pkg="sound_source_localization" type="bridge.py">
     <param name="remote_hsrb_hostname" value="hsrb80.local"/>
   </node>
   <node name="ssl_record" pkg="sound_source_localization" type="record.py"/>
