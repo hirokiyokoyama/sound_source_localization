@@ -1,0 +1,22 @@
+<launch>
+  <arg name="device" default="" />
+  <machine name="hsrb46" address="hsrb.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
+  <machine name="hsrb80" address="hsrb80.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
+
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+
+  <!-- publish audio data as wav format -->
+  <node machine="hsrb46" name="audio_capture" pkg="audio_capture" type="audio_capture" output="screen">
+    <param name="device" value="" />
+    <param name="format" value="wave" />
+    <param name="channels" value="4" />
+    <param name="depth" value="16" />
+    <param name="sample_rate" value="16000" />
+    <param name="device" value="$(arg device)" />
+  </node>
+
+  <node name="ssl_bridge" pkg="sound_source_localization" type="bridge.py">
+    <param name="remote_hsrb_hostname" value="hsrb80.local"/>
+  </node>
+  <node name="ssl_record" pkg="sound_source_localization" type="record.py"/>
+</launch>
