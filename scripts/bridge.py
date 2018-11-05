@@ -55,5 +55,6 @@ if __name__ == "__main__":
     ws_remote = websocket.WebSocketApp("ws://{}:9090".format(remote_hostname),
                                        on_open = on_open,
                                        on_message = on_message)
-    ws_remote.run_forever()
+    while not rospy.is_shutdown():
+        ws_remote.run_forever()
 
