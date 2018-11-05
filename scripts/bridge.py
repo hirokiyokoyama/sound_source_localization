@@ -3,49 +3,48 @@
 import websocket
 import json
 
-msg0 = """{
-  "op": "advertise",
-  "topic": "/remote_hsrb/laser_2d_pose",
-  "type": "geometry_msgs/PoseWithCovarianceStamped"
-}"""
-msg1 = """{
-  "op": "subscribe",
-  "topic": "/laser_2d_pose",
-  "type": "geometry_msgs/PoseWithCovarianceStamped"
-}"""
-msg2 = """{
-  "op": "advertise_service",
-  "type": "rosapi/TopicsForType",
-  "service": "/remote_hsrb/rosapi/topics_for_type"
-}"""
-def on_open(ws):
-    ws.send(msg1)
-    ws.send(msg2)
- 
-def on_message(ws, message):
-    message = json.loads(message)
-    if message['op'] == 'call_service':
-      message["service"] = message["service"][len('/remote_hsrb'):]
-      message = json.dumps(message)
-      ws_local.send(message)
-      msg = ws_local.recv()
-      msg = json.loads(msg)
-      msg["service"] = '/remote_hsrb' + msg["service"]
-      msg = json.dumps(msg)
-      ws.send(msg)
-    else:
-      message["topic"] = '/remote_hsrb' + message["topic"]
-      message = json.dumps(message)
-      ws_local.send(message)
+TOPICS = [('/laser_2d_pose', 'geometry_msgs/PoseWithCovarianceStamped')]
+SERVICES = [('/synchronize', 'sound_source_localization/Synchronize')]
+PREFIX = '/bridged'
+
+def subscribe_message(topic, typ):
+    return '{{\n"op": "subscribe",\n"topic": "{}",\n"type": "{}"\n}}'.format(topic, typ)
+def advertise_message(topic, typ):
+    return '{{\n"op": "advertise",\n"topic": "{}",\n"type": "{}"\n}}'.format(topic, typ)
+def advertise_service_message(service, typ):
+    return '{{\n"op": "advertise_service",\n"type": "{}",\n"service": "{}"\n}}'.format(typ, service)
+def append_prefix(s):
+    return PREFIX + s
+def remove_prefix(s):
+    assert s.startswith(PREFIX)
+    return s[len(PREFIX:)]
  
 if __name__ == "__main__":
     import rospy
     rospy.init_node('ssl_bridge')
     remote_hostname = rospy.get_param('~remote_hsrb_hostname')
-    #websocket.enableTrace(True)
     websocket.enableTrace(False)
+    
     ws_local = websocket.create_connection("ws://localhost:9090")
-    ws_local.send(msg0)
+    for topic, typ in TOPICS:
+        ws_local.send(advertise_message(append_prefix(topic), typ))
+        
+    def on_open(ws):
+        for topic, typ in TOPICS:
+            ws.send(subscribe_message(topic, typ))
+        for service, typ in SERVICES:
+            ws.send(advertise_service_message(append_prefix(service), typ))
+    def on_message(ws, message):
+        message = json.loads(message)
+        if message['op'] == 'call_service':
+            message["service"] = remove_prefix(message["service"])
+            ws_local.send(json.dumps(message))
+            msg = json.loads(ws_local.recv())
+            msg["service"] = append_prefix(msg["service"])
+            ws.send(json.dumps(msg))
+        elif message['op'] == 'publish':
+            message["topic"] = append_prefix(message["topic"])
+            ws_local.send(json.dumps(message))
     ws_remote = websocket.WebSocketApp("ws://{}:9090".format(remote_hostname),
                                        on_open = on_open,
                                        on_message = on_message)

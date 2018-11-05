@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   audio_capture
   audio_common_msgs
   geometry_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -54,11 +55,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  Synchronize.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -68,10 +68,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   audio_common_msgs#   geometry_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -106,6 +106,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES sound_source_localization
 #  CATKIN_DEPENDS audio_capture audio_common_msgs geometry_msgs
+ CATKIN_DEPENDS message_runtime std_msgs
 #  DEPENDS system_lib
 )
 

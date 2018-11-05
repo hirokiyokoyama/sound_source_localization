@@ -74,7 +74,7 @@ def show():
     plt.imshow(spec, origin='lower')
     plt.pause(.001)
 
-rospy.init_node('test_sound')
+rospy.init_node('ssl_train')
 
 rate = rospy.Rate(100)
 while not rospy.is_shutdown():

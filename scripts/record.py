@@ -6,6 +6,8 @@ import rospy
 import numpy as np
 import tensorflow as tf
 from utils import FrequencyMeter
+from sound_source_localization.srv import Synchronize, SynchronizeResponse
+import threading
 
 CHANNELS = 4
 SAMPLE_RATE = 16000
@@ -74,9 +76,37 @@ def show():
     plt.imshow(spec, origin='lower')
     plt.pause(.001)
 
-rospy.init_node('test_sound')
+class Synchronizer:
+    def __init__(self):
+        self._iteration = 0
+        rospy.Service('/synchronize', Synchronize, self._srv_cb)
+        self._srv = rospy.ServiceProxy('/bridged/synchronize', Synchronize)
+        self._cond = threading.Condition()
+        
+    def _srv_cb(self, req):
+        if self._iteration > req.iteration:
+            print 'Something happend!'
+            return SynchronizeResponse(-1)
+        with self._cond:
+            while self._iteration < req.iteration:
+                self._cond.wait()
+            return SynchronizeResponse(i)
 
-rate = rospy.Rate(100)
+    def next(self):
+        with self._cond:
+            self._iteration += 1
+            self._srv(self._iteration)
+
+    @property
+    def iteration(self):
+        return self._iteration
+
+rospy.init_node('ssl_record')
+sync = Synchronizer()
+
+rate = rospy.Rate(1)
 while not rospy.is_shutdown():
-    show()
+    sync.next()
+    print 'Iteration %d' % sync.iteration
+    #show()
     rate.sleep()
