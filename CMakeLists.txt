@@ -70,7 +70,7 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs
+  geometry_msgs
 )
 
 ################################################
@@ -106,7 +106,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES sound_source_localization
 #  CATKIN_DEPENDS audio_capture audio_common_msgs geometry_msgs
- CATKIN_DEPENDS message_runtime std_msgs
+ CATKIN_DEPENDS message_runtime geometry_msgs
 #  DEPENDS system_lib
 )
 

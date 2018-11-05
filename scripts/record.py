@@ -8,10 +8,11 @@ import tensorflow as tf
 from utils import FrequencyMeter
 from sound_source_localization.srv import Synchronize, SynchronizeResponse
 import threading
+from scipy.io import wavfile
 
 CHANNELS = 4
 SAMPLE_RATE = 16000
-BUFFER_SIZE = SAMPLE_RATE/5
+BUFFER_SIZE = SAMPLE_RATE*10
 
 class SoundProcessor:
     def __init__(self, channels):
@@ -78,28 +79,31 @@ def show():
 
 class Synchronizer:
     def __init__(self):
-        self._iteration = 0
+        self._iteration_local = 0
+        self._iteration_remote = 0
         rospy.Service('/synchronize', Synchronize, self._srv_cb)
         self._srv = rospy.ServiceProxy('/bridged/synchronize', Synchronize)
+        rospy.loginfo('Waiting for another robot.')
+        self._srv.wait_for_service()
         self._cond = threading.Condition()
         
     def _srv_cb(self, req):
-        if self._iteration > req.iteration:
-            print 'Something happend!'
-            return SynchronizeResponse(-1)
         with self._cond:
-            while self._iteration < req.iteration:
-                self._cond.wait()
-            return SynchronizeResponse(i)
+            self._iteration_remote = req.iteration
+            self._cond.notify()
+        return SynchronizeResponse(self._iteration_local)
 
     def next(self):
+        self._iteration_local += 1
+        self._srv(self._iteration_local)
         with self._cond:
-            self._iteration += 1
-            self._srv(self._iteration)
+            assert self._iteration_remote <= self._iteration_local, 'Something happened!'
+            while self._iteration_remote < self._iteration_local:
+                self._cond.wait()
 
     @property
     def iteration(self):
-        return self._iteration
+        return self._iteration_local
 
 rospy.init_node('ssl_record')
 sync = Synchronizer()
@@ -110,3 +114,5 @@ while not rospy.is_shutdown():
     print 'Iteration %d' % sync.iteration
     #show()
     rate.sleep()
+    #wavfile.write(filename, SAMPLE_RATE, y3)
+    

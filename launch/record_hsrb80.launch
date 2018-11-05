@@ -1,0 +1,6 @@
+<launch>
+  <include file="$(find sound_source_localization)/launch/record.launch">
+    <arg name="local_robot_hostname" value="hsrb80.local"/>
+    <arg name="remote_robot_hostname" value="hsrb.local"/>
+  </include>
+</launch>

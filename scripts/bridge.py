@@ -22,7 +22,7 @@ def remove_prefix(s):
 if __name__ == "__main__":
     import rospy
     rospy.init_node('ssl_bridge')
-    remote_hostname = rospy.get_param('~remote_hsrb_hostname')
+    remote_hostname = rospy.get_param('~remote_robot_hostname')
     websocket.enableTrace(False)
     
     ws_local = websocket.create_connection("ws://localhost:9090")
