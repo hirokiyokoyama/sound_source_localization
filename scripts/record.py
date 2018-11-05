@@ -80,6 +80,9 @@ sample_rate = rospy.get_param('ssl/sample_rate')
 sl = SoundListener(sample_rate*10, channels)
 sync = Synchronizer()
 
+if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
+    
 rate = rospy.Rate(1)
 while not rospy.is_shutdown():
     sync.next()

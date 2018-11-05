@@ -1,6 +1,8 @@
 <launch>
+  <arg name="dataset_name"/>
   <include file="$(find sound_source_localization)/launch/record.launch">
     <arg name="local_robot_hostname" value="hsrb.local"/>
     <arg name="remote_robot_hostname" value="hsrb80.local"/>
+    <arg name="dataset_name" value="$(arg dataset_name)"/>
   </include>
 </launch>
