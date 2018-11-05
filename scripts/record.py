@@ -41,14 +41,17 @@ class SoundListener:
             self._pointer = 0
             
     def stop(self):
+        if self._pointer < 0:
+            raise ValueError('Recording not started yet.')
         with self._lock:
+            data = self._buf[:self._pointer].copy()
             self._pointer = -1
-            return self._buf.copy()
+        return data
 
 class Synchronizer:
     def __init__(self):
-        self._iteration_local = 0
-        self._iteration_remote = 0
+        self._sequence_local = 0
+        self._sequence_remote = 0
         self._cond = threading.Condition()
         rospy.Service('/synchronize', Synchronize, self._srv_cb)
         self._srv = rospy.ServiceProxy('/bridged/synchronize', Synchronize)
@@ -57,38 +60,59 @@ class Synchronizer:
         
     def _srv_cb(self, req):
         with self._cond:
-            self._iteration_remote = req.iteration
+            self._sequence_remote = req.sequence
             self._cond.notify()
-        return SynchronizeResponse(self._iteration_local)
+        return SynchronizeResponse(self._sequence_local)
 
     def next(self):
-        self._iteration_local += 1
-        self._srv(self._iteration_local)
+        self._sequence_local += 1
+        self._srv(self._sequence_local)
         with self._cond:
-            assert self._iteration_remote <= self._iteration_local, 'Something happened!'
-            while self._iteration_remote < self._iteration_local:
+            assert self._sequence_remote <= self._sequence_local, 'Something happened!'
+            while self._sequence_remote < self._sequence_local:
                 self._cond.wait()
+        return seq
 
     @property
-    def iteration(self):
-        return self._iteration_local
+    def sequence(self):
+        return self._sequence_local
 
 rospy.init_node('ssl_record')
 save_dir = rospy.get_param('~save_dir')
 channels = rospy.get_param('ssl/channels')
 sample_rate = rospy.get_param('ssl/sample_rate')
+role_name = rospy.get_param('~role_name')
 sl = SoundListener(sample_rate*10, channels)
 sync = Synchronizer()
 
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
-    
-rate = rospy.Rate(1)
+
+def phase_generator(phases):
+    i = 0
+    while True:
+        for j, phase in enumerate(phases):
+            yield i, j, phase
+        i += 1
+gen = phase_generator([{'A': 'LISTEN', 'B': 'SPEAK'},
+                       {'A': 'SAVE', 'B': 'WAIT'},
+                       {'A': 'SPEAK', 'B': 'LISTEN'},
+                       {'A': 'WAIT', 'B': 'SAVE'}])
+
+from common.speech import DefaultTTS
+tts = DefaultTTS()
+
 while not rospy.is_shutdown():
-    sync.next()
-    print 'Iteration %d' % sync.iteration
-    sl.start()
-    rate.sleep()
-    data = sl.stop()
-    filename = os.path.join(save_dir, 'sound_{:04d}.wav'.format(sync.iteration))
-    wavfile.write(filename, sample_rate, data)
+    seq = sync.next()
+    iteration, phase, roles = gen.next()
+    print 'Iteration %d, phase %d' % (iteration, phase)
+    role = roles[role_name]
+    print role
+    if role == 'LISTEN':
+        sl.start()
+    elif role == 'SPEAK':
+        tts.say('hello')
+    elif role == 'SAVE':
+        data = sl.stop()
+        filename = os.path.join(save_dir, 'sound_{:04d}_{:02d}.wav'.format(iteration,phase))
+        wavfile.write(filename, sample_rate, data)

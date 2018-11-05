@@ -7,6 +7,7 @@
   <arg name="channels" default="4"/>
   <arg name="sample_rate" default="16000"/>
   <arg name="dataset_name"/>
+  <arg name="role_name"/>
   
   <machine name="robot" address="$(arg local_robot_hostname)" env-loader="$(arg local_robot_env-loader)" user="$(arg local_robot_user)" password="$(arg local_robot_password)"/>
 
@@ -43,5 +44,6 @@
   <!-- main node -->
   <node name="ssl_record" pkg="sound_source_localization" type="record.py" output="screen">
     <param name="save_dir" value="$(find sound_source_localization)/data/$(arg dataset_name)"/>
+    <param name="role_name" value="$(arg role_name)"/>
   </node>
 </launch>
