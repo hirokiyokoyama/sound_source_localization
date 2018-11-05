@@ -17,7 +17,7 @@ def append_prefix(s):
     return PREFIX + s
 def remove_prefix(s):
     assert s.startswith(PREFIX)
-    return s[len(PREFIX:)]
+    return s[len(PREFIX):]
  
 if __name__ == "__main__":
     import rospy
