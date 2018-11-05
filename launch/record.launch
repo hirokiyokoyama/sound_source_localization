@@ -4,8 +4,14 @@
   <arg name="local_robot_env-loader" default="/home/hsr-user/env.sh"/>
   <arg name="local_robot_user" default="hsr-user"/>
   <arg name="local_robot_password" default="hsruser"/>
+  <arg name="channels" default="4"/>
+  <arg name="sample_rate" default="16000"/>
+  <arg name="dataset_name"/>
   
   <machine name="robot" address="$(arg local_robot_hostname)" env-loader="$(arg local_robot_env-loader)" user="$(arg local_robot_user)" password="$(arg local_robot_password)"/>
+
+  <param name="ssl/channels" value="$(arg channels)"/>
+  <param name="ssl/sample_rate" value="$(arg sample_rate)"/>
 
   <node machine="robot" name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket">
     <param name="authenticate" value="false" />
@@ -25,9 +31,9 @@
   <node machine="robot" name="audio_capture" pkg="audio_capture" type="audio_capture">
     <param name="device" value="" />
     <param name="format" value="wave" />
-    <param name="channels" value="4" />
+    <param name="channels" value="$(arg channels)" />
     <param name="depth" value="16" />
-    <param name="sample_rate" value="16000" />
+    <param name="sample_rate" value="$(arg sample_rate)" />
   </node>
 
   <node machine="robot" name="ssl_bridge" pkg="sound_source_localization" type="bridge.py">
@@ -35,5 +41,7 @@
   </node>
 
   <!-- main node -->
-  <node name="ssl_record" pkg="sound_source_localization" type="record.py" output="screen"/>
+  <node name="ssl_record" pkg="sound_source_localization" type="record.py" output="screen">
+    <param name="save_dir" value="$(find sound_source_localization)/data/$(arg dataset_name)"/>
+  </node>
 </launch>

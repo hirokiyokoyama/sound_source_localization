@@ -40,6 +40,7 @@ if __name__ == "__main__":
         for topic, typ in TOPICS:
             ws.send(subscribe_message(topic, typ))
         for service, typ in SERVICES:
+            rospy.wait_for_service(service)
             ws.send(advertise_service_message(append_prefix(service), typ))
     def on_message(ws, message):
         message = json.loads(message)
