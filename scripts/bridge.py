@@ -24,8 +24,15 @@ if __name__ == "__main__":
     rospy.init_node('ssl_bridge')
     remote_hostname = rospy.get_param('~remote_robot_hostname')
     websocket.enableTrace(False)
-    
-    ws_local = websocket.create_connection("ws://localhost:9090")
+
+    while not rospy.is_shutdown():
+        try:
+            ws_local = websocket.create_connection("ws://localhost:9090")
+            break
+        except:
+            rospy.loginfo('Waiting for rosbridge.')
+            rospy.sleep(1.)
+        
     for topic, typ in TOPICS:
         ws_local.send(advertise_message(append_prefix(topic), typ))
         
