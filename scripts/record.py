@@ -71,7 +71,6 @@ class Synchronizer:
             assert self._sequence_remote <= self._sequence_local, 'Something happened!'
             while self._sequence_remote < self._sequence_local:
                 self._cond.wait()
-        return seq
 
     @property
     def sequence(self):
@@ -103,7 +102,7 @@ from common.speech import DefaultTTS
 tts = DefaultTTS()
 
 while not rospy.is_shutdown():
-    seq = sync.next()
+    sync.next()
     iteration, phase, roles = gen.next()
     print 'Iteration %d, phase %d' % (iteration, phase)
     role = roles[role_name]
