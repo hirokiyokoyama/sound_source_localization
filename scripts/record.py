@@ -8,6 +8,8 @@ from sound_source_localization.srv import Synchronize, SynchronizeResponse
 import threading
 from scipy.io import wavfile
 import os
+from geometry_msgs.msg import PoseWithCovarianceStamped
+import yaml
 
 class SoundListener:
     def __init__(self, buffer_size, channels):
@@ -81,6 +83,7 @@ save_dir = rospy.get_param('~save_dir')
 channels = rospy.get_param('ssl/channels')
 sample_rate = rospy.get_param('ssl/sample_rate')
 role_name = rospy.get_param('~role_name')
+prefix = rospy.get_param('ssl/remote_prefix')
 sl = SoundListener(sample_rate*10, channels)
 sync = Synchronizer()
 
@@ -113,5 +116,14 @@ while not rospy.is_shutdown():
         tts.say('hello')
     elif role == 'SAVE':
         data = sl.stop()
+        local_pose = rospy.wait_for_message('/laser_2d_pose', PoseWithCovarianceStamped)
+        remote_pose = rospy.wait_for_message(prefix+'/laser_2d_pose', PoseWithCovarianceStamped)
+        
         filename = os.path.join(save_dir, 'sound_{:04d}_{:02d}.wav'.format(iteration,phase))
         wavfile.write(filename, sample_rate, data)
+        filename = os.path.join(save_dir, 'local_pose_{:04d}_{:02d}.msg'.format(iteration,phase))
+        with open(filename, 'wb') as f:
+            local_pose.serialize(f)
+        filename = os.path.join(save_dir, 'remote_pose_{:04d}_{:02d}.msg'.format(iteration,phase))
+        with open(filename, 'wb') as f:
+            remote_pose.serialize(f)

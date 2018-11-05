@@ -5,7 +5,6 @@ import json
 
 TOPICS = [('/laser_2d_pose', 'geometry_msgs/PoseWithCovarianceStamped')]
 SERVICES = [('/synchronize', 'sound_source_localization/Synchronize')]
-PREFIX = '/bridged'
 
 def subscribe_message(topic, typ):
     return '{{\n"op": "subscribe",\n"topic": "{}",\n"type": "{}"\n}}'.format(topic, typ)
@@ -14,15 +13,16 @@ def advertise_message(topic, typ):
 def advertise_service_message(service, typ):
     return '{{\n"op": "advertise_service",\n"type": "{}",\n"service": "{}"\n}}'.format(typ, service)
 def append_prefix(s):
-    return PREFIX + s
+    return prefix + s
 def remove_prefix(s):
-    assert s.startswith(PREFIX)
-    return s[len(PREFIX):]
+    assert s.startswith(prefix)
+    return s[len(prefix):]
  
 if __name__ == "__main__":
     import rospy
     rospy.init_node('ssl_bridge')
     remote_hostname = rospy.get_param('~remote_robot_hostname')
+    prefix = rospy.get_param('ssl/remote_prefix')
     websocket.enableTrace(False)
 
     while not rospy.is_shutdown():

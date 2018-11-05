@@ -13,6 +13,7 @@
 
   <param name="ssl/channels" value="$(arg channels)"/>
   <param name="ssl/sample_rate" value="$(arg sample_rate)"/>
+  <param name="ssl/remote_prefix" value="/bridged"/>
 
   <node machine="robot" name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket">
     <param name="authenticate" value="false" />
