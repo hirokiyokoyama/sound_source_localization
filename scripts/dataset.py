@@ -24,7 +24,7 @@ def maybe_download_and_extract(data_url, dest_directory):
 
 def get_speech_commands_dataset(directory):
     maybe_download_and_extract(SPEECH_COMMANDS_URL, directory)
-    dirs = filter(os.path.isdir, os.listdir(directory))
+    dirs = filter(lambda x: os.path.isdir(os.path.join(directory, x)), os.listdir(directory))
     dataset = {}
     for d in dirs:
         d_full = os.path.join(directory, d)
