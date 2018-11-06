@@ -15,6 +15,7 @@ import hsrb_interface
 #rospy.init_node('ssl_record')
 robot = hsrb_interface.Robot()
 omni_base = robot.get('omni_base')
+whole_body = robot.get('whole_body')
 
 sound_dir = rospy.get_param('~sound_dir')
 save_dir = rospy.get_param('~save_dir')
@@ -78,6 +79,12 @@ while not rospy.is_shutdown():
         
         filename = os.path.join(save_dir, 'sound_{:04d}_{:04d}.wav'.format(iteration,phase))
         wavfile.write(filename, sample_rate, data)
+        filename = os.path.join(save_dir, 'local_scan_{:04d}_{:04d}.msg'.format(iteration,phase))
+        with open(filename, 'wb') as f:
+            local_scan.serialize(f)
+        filename = os.path.join(save_dir, 'remote_scan_{:04d}_{:04d}.msg'.format(iteration,phase))
+        with open(filename, 'wb') as f:
+            remote_scan.serialize(f)
         filename = os.path.join(save_dir, 'local_pose_{:04d}_{:04d}.msg'.format(iteration,phase))
         with open(filename, 'wb') as f:
             local_pose.serialize(f)
@@ -86,3 +93,4 @@ while not rospy.is_shutdown():
             remote_pose.serialize(f)
     elif role == 'TURN':
         omni_base.go_rel(0, 0, turn_angle/180.*np.pi)
+        whole_body.move_to_go()
