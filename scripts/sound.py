@@ -55,6 +55,8 @@ class SoundPlayer:
         self._channels = channels
         
     def play(self, data):
+        if len(data.shape) == 1:
+            data = np.expand_dims(data, 1)
         assert len(data.shape) == 2 and data.shape[1] == self._channels
         assert data.dtype == np.int16
         self._stream.start_stream()
