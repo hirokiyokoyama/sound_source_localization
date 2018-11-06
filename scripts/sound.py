@@ -47,10 +47,10 @@ class SoundListener:
 class SoundPlayer:
     def __init__(self, channels=1, sample_rate=16000):
         self._pa = pyaudio.PyAudio()
-        self._stream = pa.open(format=pyaudio.paInt16,
-                               channels=channels,
-                               rate=sample_rate,
-                               output=True)
+        self._stream = self._pa.open(format=pyaudio.paInt16,
+                                     channels=channels,
+                                     rate=sample_rate,
+                                     output=True)
         self._stream.stop_stream()
         self._channels = channels
         
