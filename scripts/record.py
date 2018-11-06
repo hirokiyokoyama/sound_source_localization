@@ -50,9 +50,6 @@ for a, b in [('A', 'B'), ('B', 'A')]:
         plan += [{a: 'TURN', b: 'WAIT'}]
 gen = phase_generator(plan)
 
-from common.speech import DefaultTTS
-tts = DefaultTTS()
-
 mapmsg = rospy.wait_for_message('/static_distance_map_ref', OccupancyGrid)
 with open(os.path.join(save_dir, 'map.msg'), 'wb') as f:
     mapmsg.serialize(f)
