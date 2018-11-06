@@ -3,7 +3,8 @@
 import websocket
 import json
 
-TOPICS = [('/laser_2d_pose', 'geometry_msgs/PoseWithCovarianceStamped')]
+TOPICS = [('/laser_2d_pose', 'geometry_msgs/PoseWithCovarianceStamped'),
+          ('/hsrb/base_scan', 'nav_msgs/LaserScan')]
 SERVICES = [('/synchronize', 'sound_source_localization/Synchronize')]
 
 def subscribe_message(topic, typ):

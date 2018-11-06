@@ -1,90 +1,31 @@
 #!/usr/bin/env python
 
-from audio_common_msgs.msg import AudioData
 import rospy
 import numpy as np
-from utils import FrequencyMeter
-from sound_source_localization.srv import Synchronize, SynchronizeResponse
-import threading
+from utils import Synchronizer
+from sound import SoundListener
 from scipy.io import wavfile
 import os
 from geometry_msgs.msg import PoseWithCovarianceStamped
-import yaml
+from nav_msgs.msg import OccupancyGrid
+from sensor_msgs.msg import LaserScan
+import hsrb_interface
 
-class SoundListener:
-    def __init__(self, buffer_size, channels):
-        self._freq_meter = FrequencyMeter(100)
-        self._sub = rospy.Subscriber('audio', AudioData, self._cb)
+#rospy.init_node('ssl_record')
+robot = hsrb_interface.Robot()
+omni_base = robot.get('omni_base')
 
-        self._buf = np.zeros([buffer_size, channels], dtype=np.int16)
-        self._pointer = -1
-        self._lock = threading.Lock()
-        
-    def _cb(self, msg):
-        data = np.fromstring(msg.data, dtype=np.int16)
-        data = data.reshape(-1, self._buf.shape[1])
-        begin = 0
-        end = 0
-        with self._lock:
-            if self._pointer >= 0:
-                begin = self._pointer
-                end = min(begin+data.shape[0], self._buf.shape[0])
-                self._buf[begin:end,:] = data[:end-begin,:]
-                self._pointer = end
-        if end == self._buf.shape[0]:
-            rospy.logwarn('Buffer overrun.')
-        
-        f = self._freq_meter.tap()
-        if f is not None:
-            print '{} Hz'.format(f)
-
-    def start(self):
-        with self._lock:
-            self._pointer = 0
-            
-    def stop(self):
-        if self._pointer < 0:
-            raise ValueError('Recording not started yet.')
-        with self._lock:
-            data = self._buf[:self._pointer].copy()
-            self._pointer = -1
-        return data
-
-class Synchronizer:
-    def __init__(self):
-        self._sequence_local = 0
-        self._sequence_remote = 0
-        self._cond = threading.Condition()
-        rospy.Service('/synchronize', Synchronize, self._srv_cb)
-        self._srv = rospy.ServiceProxy('/bridged/synchronize', Synchronize)
-        rospy.loginfo('Waiting for another robot.')
-        self._srv.wait_for_service()
-        
-    def _srv_cb(self, req):
-        with self._cond:
-            self._sequence_remote = req.sequence
-            self._cond.notify()
-        return SynchronizeResponse(self._sequence_local)
-
-    def next(self):
-        self._sequence_local += 1
-        self._srv(self._sequence_local)
-        with self._cond:
-            assert self._sequence_remote <= self._sequence_local, 'Something happened!'
-            while self._sequence_remote < self._sequence_local:
-                self._cond.wait()
-
-    @property
-    def sequence(self):
-        return self._sequence_local
-
-rospy.init_node('ssl_record')
 save_dir = rospy.get_param('~save_dir')
 channels = rospy.get_param('ssl/channels')
 sample_rate = rospy.get_param('ssl/sample_rate')
 role_name = rospy.get_param('~role_name')
 prefix = rospy.get_param('ssl/remote_prefix')
+turn_angle = rospy.get_param('~turn_angle', 36)
+turn_num = rospy.get_param('~turn_num', 10)
+speak_num = rospy.get_param('~speak_num', 10)
+
 sl = SoundListener(sample_rate*10, channels)
+sp = SoundPlayer(channels=channels, sample_rate=sample_rate)
 sync = Synchronizer()
 
 if not os.path.exists(save_dir):
@@ -96,13 +37,21 @@ def phase_generator(phases):
         for j, phase in enumerate(phases):
             yield i, j, phase
         i += 1
-gen = phase_generator([{'A': 'LISTEN', 'B': 'SPEAK'},
-                       {'A': 'SAVE', 'B': 'WAIT'},
-                       {'A': 'SPEAK', 'B': 'LISTEN'},
-                       {'A': 'WAIT', 'B': 'SAVE'}])
+plan = []
+for a, b in [('A', 'B'), ('B', 'A')]:
+    for _ in range(turn_num):
+        for _ in range(speak_num):
+            plan += [{a: 'LISTEN', b: 'SPEAK'},
+                     {a: 'SAVE',   b: 'WAIT'}]
+        plan += [{a: 'TURN', b: 'WAIT'}]
+gen = phase_generator(plan)
 
 from common.speech import DefaultTTS
 tts = DefaultTTS()
+
+mapmsg = rospy.wait_for_message('/static_distance_map_ref', OccupancyGrid)
+with open(os.path.join(save_dir, 'map.msg'), 'wb') as f:
+    mapmsg.serialize(f)
 
 while not rospy.is_shutdown():
     sync.next()
@@ -116,14 +65,18 @@ while not rospy.is_shutdown():
         tts.say('hello')
     elif role == 'SAVE':
         data = sl.stop()
+        local_scan = rospy.wait_for_message('/hsrb/base_scan', LaserScan)
+        remote_scan = rospy.wait_for_message(prefix+'/hsrb/base_scan', LaserScan)
         local_pose = rospy.wait_for_message('/laser_2d_pose', PoseWithCovarianceStamped)
         remote_pose = rospy.wait_for_message(prefix+'/laser_2d_pose', PoseWithCovarianceStamped)
         
-        filename = os.path.join(save_dir, 'sound_{:04d}_{:02d}.wav'.format(iteration,phase))
+        filename = os.path.join(save_dir, 'sound_{:04d}_{:04d}.wav'.format(iteration,phase))
         wavfile.write(filename, sample_rate, data)
-        filename = os.path.join(save_dir, 'local_pose_{:04d}_{:02d}.msg'.format(iteration,phase))
+        filename = os.path.join(save_dir, 'local_pose_{:04d}_{:04d}.msg'.format(iteration,phase))
         with open(filename, 'wb') as f:
             local_pose.serialize(f)
-        filename = os.path.join(save_dir, 'remote_pose_{:04d}_{:02d}.msg'.format(iteration,phase))
+        filename = os.path.join(save_dir, 'remote_pose_{:04d}_{:04d}.msg'.format(iteration,phase))
         with open(filename, 'wb') as f:
             remote_pose.serialize(f)
+    elif role == 'TURN':
+        omni_base.go_rel(0,0,turn_angle/180.*np.pi)

@@ -6,6 +6,7 @@ import rospy
 import numpy as np
 import tensorflow as tf
 from utils import FrequencyMeter
+from scipy.io import wavfile
 
 CHANNELS = 4
 SAMPLE_RATE = 16000
@@ -78,5 +79,6 @@ rospy.init_node('ssl_train')
 
 rate = rospy.Rate(100)
 while not rospy.is_shutdown():
+    #sample_rate, data = wavfile.read('sound_0000_03.wav')
     show()
     rate.sleep()
