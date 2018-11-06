@@ -2,6 +2,7 @@
 
 import rospy
 import numpy as np
+from dataset import get_speech_commands_dataset
 from utils import Synchronizer
 from sound import SoundListener
 from scipy.io import wavfile
@@ -15,6 +16,7 @@ import hsrb_interface
 robot = hsrb_interface.Robot()
 omni_base = robot.get('omni_base')
 
+sound_dir = rospy.get_param('~sound_dir')
 save_dir = rospy.get_param('~save_dir')
 channels = rospy.get_param('ssl/channels')
 sample_rate = rospy.get_param('ssl/sample_rate')
@@ -24,8 +26,10 @@ turn_angle = rospy.get_param('~turn_angle', 36)
 turn_num = rospy.get_param('~turn_num', 10)
 speak_num = rospy.get_param('~speak_num', 10)
 
+sound_dataset = get_speech_commands_dataset(sound_dir)
+background_noises = sound_dataset.pop('_background_noise_')
 sl = SoundListener(sample_rate*10, channels)
-sp = SoundPlayer(channels=channels, sample_rate=sample_rate)
+sp = SoundPlayer(channels=1, sample_rate=16000) # Sampling rate is 16kHz in speech_commands dataset
 sync = Synchronizer()
 
 if not os.path.exists(save_dir):
@@ -62,7 +66,11 @@ while not rospy.is_shutdown():
     if role == 'LISTEN':
         sl.start()
     elif role == 'SPEAK':
-        tts.say('hello')
+        key = np.random.choice(sound_dataset.keys())
+        filename = np.random.choice(sound_dataset[key])
+        rate, data = wavfile.read(filename)
+        assert rate == 16000
+        sp.play(data)
     elif role == 'SAVE':
         data = sl.stop()
         local_scan = rospy.wait_for_message('/hsrb/base_scan', LaserScan)
