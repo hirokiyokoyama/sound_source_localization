@@ -3,7 +3,7 @@ from six.moves import urllib
 import tarfile
 import sys
 
-DATA_URL = "http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz"
+SPEECH_COMMANDS_URL = "http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz"
 
 def maybe_download_and_extract(data_url, dest_directory):
     if os.path.exists(dest_directory):
@@ -22,3 +22,12 @@ def maybe_download_and_extract(data_url, dest_directory):
     tarfile.open(filepath, 'r:gz').extractall(dest_directory)
     os.remove(filepath)
 
+def get_speech_commands_dataset(directory):
+    maybe_download_and_extract(SPEECH_COMMANDS_URL, directory)
+    dirs = filter(os.path.isdir, os.listdir(directory))
+    dataset = {}
+    for d in dirs:
+        d_full = os.path.join(directory, d)
+        files = filter(lambda x: x.endswith('.wav'), os.listdir(d_full))
+        dataset[d] = map(lambda x: os.path.join(d_full, x), files)
+    return dataset
