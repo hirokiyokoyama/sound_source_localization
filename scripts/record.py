@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 from dataset import get_speech_commands_dataset
 from utils import Synchronizer
-from sound import SoundListener
+from sound import SoundListener, SoundPlayer
 from scipy.io import wavfile
 import os
 from geometry_msgs.msg import PoseWithCovarianceStamped
