@@ -9,6 +9,7 @@ def maybe_download_and_extract(data_url, dest_directory):
     if os.path.exists(dest_directory):
         return
     os.makedirs(dest_directory)
+    print 'Dataset does not exist.'
     filename = data_url.split('/')[-1]
     filepath = os.path.join(dest_directory, filename)
     if not os.path.exists(filepath):
@@ -19,6 +20,7 @@ def maybe_download_and_extract(data_url, dest_directory):
 
         filepath, _ = urllib.request.urlretrieve(data_url, filepath, _progress)
         print ''
+    print 'Extracting...'
     tarfile.open(filepath, 'r:gz').extractall(dest_directory)
     os.remove(filepath)
 

@@ -71,6 +71,7 @@ while not rospy.is_shutdown():
         rate, data = wavfile.read(filename)
         assert rate == 16000
         sp.play(data)
+        rospy.sleep(1.)
     elif role == 'SAVE':
         data = sl.stop()
         local_scan = rospy.wait_for_message('/hsrb/base_scan', LaserScan)
@@ -87,4 +88,4 @@ while not rospy.is_shutdown():
         with open(filename, 'wb') as f:
             remote_pose.serialize(f)
     elif role == 'TURN':
-        omni_base.go_rel(0,0,turn_angle/180.*np.pi)
+        omni_base.go_rel(0, 0, turn_angle/180.*np.pi)
