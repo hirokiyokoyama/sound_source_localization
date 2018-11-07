@@ -7,7 +7,7 @@ import os, sys
 from scipy.io import wavfile
 from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped
 from sound import SoundPlayer
 from tf import transformations
 import yaml
@@ -56,10 +56,10 @@ with open(os.path.join(data_dir, 'self_scan_'+data_num+'.msg'), 'rb') as f:
 rscanmsg = LaserScan()
 with open(os.path.join(data_dir, 'other_scan_'+data_num+'.msg'), 'rb') as f:
     rscanmsg.deserialize(f.read())
-lposemsg = PoseWithCovarianceStamped()
+lposemsg = PoseStamped()
 with open(os.path.join(data_dir, 'self_pose_'+data_num+'.msg'), 'rb') as f:
     lposemsg.deserialize(f.read())
-rposemsg = PoseWithCovarianceStamped()
+rposemsg = PoseStamped()
 with open(os.path.join(data_dir, 'other_pose_'+data_num+'.msg'), 'rb') as f:
     rposemsg.deserialize(f.read())
 with open(os.path.join(data_dir, 'meta_'+data_num+'.txt'), 'rb') as f:
@@ -94,14 +94,14 @@ scale = transformations.scale_matrix(mapmsg.info.resolution)
 pixel2map = np.matmul(trans, np.matmul(rot, scale))
 map2pixel = np.linalg.inv(pixel2map)
 
-p = lposemsg.pose.pose.position
+p = lposemsg.pose.position
 lx,ly,lz,_ = np.matmul(map2pixel, np.array([p.x, p.y, p.z, 1.]))
-o = lposemsg.pose.pose.orientation
+o = lposemsg.pose.orientation
 o = transformations.quaternion_matrix([o.x, o.y, o.z, o.w])[:,0]
 ldx, ldy = np.matmul(map2pixel, o)[:2]
-p = rposemsg.pose.pose.position
+p = rposemsg.pose.position
 rx,ry,rz,_ = np.matmul(map2pixel, np.array([p.x, p.y, p.z, 1.]))
-o = rposemsg.pose.pose.orientation
+o = rposemsg.pose.orientation
 o = transformations.quaternion_matrix([o.x, o.y, o.z, o.w])[:,0]
 rdx, rdy = np.matmul(map2pixel, o)[:2]
 xmin, xmax = -15., 15.
@@ -109,8 +109,8 @@ ymin, ymax = -15., 15.
 xmin, ymin = np.matmul(map2pixel, np.array([xmin, ymin, 0., 1.]))[:2]
 xmax, ymax = np.matmul(map2pixel, np.array([xmax, ymax, 0., 1.]))[:2]
 
-lscanpoints = np.matmul(map2pixel, scan2points(lscanmsg, lposemsg.pose.pose))
-rscanpoints = np.matmul(map2pixel, scan2points(rscanmsg, rposemsg.pose.pose))
+lscanpoints = np.matmul(map2pixel, scan2points(lscanmsg, lposemsg.pose))
+rscanpoints = np.matmul(map2pixel, scan2points(rscanmsg, rposemsg.pose))
 
 plt.subplot(2,1,2)
 plt.imshow(mapimg, origin='lower')

@@ -111,7 +111,6 @@ while not rospy.is_shutdown():
         speaker_pose = tf2pose(speaker_tf)
         base_tf = tf_buffer.lookup_transform('map', 'base_range_sensor_link', rospy.Time(0))
         base_pose = tf2pose(base_tf)
-        rospy.sleep(1.)
         next_data = {'sound_file': filename,
                      'text': key,
                      'speaker_pose': serialize_rosmsg(speaker_pose),

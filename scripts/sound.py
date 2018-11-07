@@ -53,14 +53,17 @@ class SoundPlayer:
                                      output=True)
         self._stream.stop_stream()
         self._channels = channels
+        self._sample_rate = sample_rate
         
     def play(self, data):
         if len(data.shape) == 1:
             data = np.expand_dims(data, 1)
         assert len(data.shape) == 2 and data.shape[1] == self._channels
         assert data.dtype == np.int16
+        duration = data.shape[0]/float(self._sample_rate)
         self._stream.start_stream()
         self._stream.write(data.tostring())
+        rospy.sleep(duration)
         self._stream.stop_stream()
 
     def __del__(self):

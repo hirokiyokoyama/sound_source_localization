@@ -1,7 +1,7 @@
 <launch>
   <arg name="local_robot_hostname" default="hsrb.local"/>
   <arg name="remote_robot_hostname" default="hsrb80.local"/>
-  <arg name="local_robot_env-loader" default="/home/hsr-user/env.sh"/>
+  <arg name="local_robot_env-loader" default="/home/hsr-user/env_alsa.sh"/>
   <arg name="local_robot_user" default="hsr-user"/>
   <arg name="local_robot_password" default="hsruser"/>
   <arg name="channels" default="4"/>
