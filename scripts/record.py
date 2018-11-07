@@ -89,9 +89,6 @@ while not rospy.is_shutdown():
     if role == 'FACE':
         self_pose = rospy.wait_for_message('/laser_2d_pose', PoseWithCovarianceStamped).pose.pose
         other_pose = rospy.wait_for_message(prefix+'/laser_2d_pose', PoseWithCovarianceStamped).pose.pose
-        #from tf.transformations import quaternion_inverse, quaternion_multiply
-        #q = quaternion_multiply(other_pose.orientation, quaternion_inverse(self_pose.orientation))
-        #angle = np.arctan2(q.z, q.w)*2
         self_ori = np.arctan2(self_pose.orientation.z, self_pose.orientation.w)*2
         other_dir = np.arctan2(other_pose.position.y-self_pose.position.y,
                                other_pose.position.x-self_pose.position.x)
@@ -145,7 +142,9 @@ while not rospy.is_shutdown():
         whole_body.move_to_neutral()
     elif role == 'HIGHER':
         current_pos = whole_body.joint_positions['arm_lift_joint']
-        whole_body.move_to_joint_positions({'arm_lift_joint': current_pos+(lift_max-lift_min)/float(lift_num)})
+        next_pos = current_pos+(lift_max-lift_min)/float(lift_num)
+        whole_body.move_to_joint_positions({'arm_lift_joint': min(next_pos, lift_max)})
     elif role == 'LOWEST':
         whole_body.move_to_neutral()
         whole_body.move_to_joint_positions({'arm_lift_joint': lift_min})
+    print 'Phase done. Waiting...'

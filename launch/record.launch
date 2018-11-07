@@ -43,7 +43,7 @@
   </node>
 
   <!-- main node -->
-  <node machine="robot" name="ssl_record" pkg="sound_source_localization" type="record.py" output="screen">
+  <node name="ssl_record" pkg="sound_source_localization" type="record.py" output="screen">
     <param name="sound_dir" value="$(find sound_source_localization)/data/speech_commands"/>
     <param name="save_dir" value="$(find sound_source_localization)/data/$(arg dataset_name)"/>
     <param name="role_name" value="$(arg role_name)"/>

@@ -8,7 +8,7 @@ import pyaudio
 class SoundListener:
     def __init__(self, buffer_size, channels):
         self._freq_meter = FrequencyMeter(100)
-        self._sub = rospy.Subscriber('audio', AudioData, self._cb)
+        self._sub = rospy.Subscriber('audio', AudioData, self._cb, queue_size=100)
 
         self._buf = np.zeros([buffer_size, channels], dtype=np.int16)
         self._pointer = -1
