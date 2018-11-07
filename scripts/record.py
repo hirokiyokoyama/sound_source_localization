@@ -28,7 +28,7 @@ prefix = rospy.get_param('ssl/remote_prefix')
 turn_angle = rospy.get_param('~turn_angle', 36)
 turn_num = rospy.get_param('~turn_num', 10)
 lift_min = rospy.get_param('~lift_min', 0.)
-lift_max = rospy.get_param('~lift_max', .7)
+lift_max = rospy.get_param('~lift_max', .69)
 lift_num = rospy.get_param('~lift_num', 10)
 
 sound_dataset = get_speech_commands_dataset(sound_dir)
@@ -145,8 +145,8 @@ while not rospy.is_shutdown():
         omni_base.go_rel(0, 0, turn_angle/180.*np.pi)
         whole_body.move_to_neutral()
     elif role == 'HIGHER':
-        current_pos = whole_body.get_joint_position('arm_lift')
-        whole_body.move_to_joint_positions({'arm_lift': current_pos+(lift_max-lift_min)/(float)lift_num})
+        current_pos = whole_body.joint_positions['arm_lift_joint']
+        whole_body.move_to_joint_positions({'arm_lift_joint': current_pos+(lift_max-lift_min)/float(lift_num)})
     elif role == 'LOWEST':
         whole_body.move_to_neutral()
-        whole_body.move_to_joint_positions({'arm_lift': lift_min})
+        whole_body.move_to_joint_positions({'arm_lift_joint': lift_min})
