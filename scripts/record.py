@@ -93,7 +93,7 @@ while not rospy.is_shutdown():
         #from tf.transformations import quaternion_inverse, quaternion_multiply
         #q = quaternion_multiply(other_pose.orientation, quaternion_inverse(self_pose.orientation))
         #angle = np.arctan2(q.z, q.w)*2
-        self_ori = np.arctan2(self_pose.orientation.z, self_pose.orientation.w)
+        self_ori = np.arctan2(self_pose.orientation.z, self_pose.orientation.w)*2
         other_dir = np.arctan2(other_pose.position.y-self_pose.position.y,
                                other_pose.position.x-self_pose.position.x)
         omni_base.go_rel(0, 0, other_dir-self_ori)
