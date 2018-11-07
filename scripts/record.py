@@ -65,9 +65,8 @@ def phase_generator(phases):
         i += 1
 plan = []
 for a, b in [('A', 'B'), ('B', 'A')]:
+    plan += [{a: 'FACE', b: 'FACE'}]
     for _ in range(turn_num):
-        plan += [{a: 'FACE', b: 'FACE'},
-                 {a: 'WAIT', b: 'LOWEST'}]
         for _ in range(lift_num):
             plan += [{a: 'LISTEN', b: 'SPEAK'},
                      {a: 'SAVE',   b: 'HIGHER'}]
