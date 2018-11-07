@@ -39,6 +39,12 @@ sync = Synchronizer()
 
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
+    it = 0
+else:
+    files = filter(lambda x: x.startswith('sound') and x.endswith('.wav'), os.listdir(save_dir))
+    
+    it = max(int(f.split('_')[1]) for f in files) + 1
+    print '{} already exists. Resuming from iteration {}.'.format(save_dir, it)
 
 def tf2pose(tf):
     ps = PoseStamped()
@@ -57,8 +63,7 @@ def serialize_rosmsg(msg):
     sio.close()
     return ret
 
-def phase_generator(phases):
-    i = 0
+def phase_generator(phases, i=0):
     while True:
         for j, phase in enumerate(phases):
             yield i, j, phase
@@ -71,7 +76,7 @@ for a, b in [('A', 'B'), ('B', 'A')]:
             plan += [{a: 'LISTEN', b: 'SPEAK'},
                      {a: 'SAVE',   b: 'HIGHER'}]
         plan += [{a: 'TURN', b: 'LOWEST'}]
-gen = phase_generator(plan)
+gen = phase_generator(plan, i=it)
 
 mapmsg = rospy.wait_for_message('/static_distance_map_ref', OccupancyGrid)
 with open(os.path.join(save_dir, 'map.msg'), 'wb') as f:
