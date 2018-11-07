@@ -101,8 +101,8 @@ while not rospy.is_shutdown():
     elif role == 'LISTEN':
         sl.start()
     elif role == 'SPEAK':
-        key = np.random.choice(sound_dataset.keys())
-        filename = np.random.choice(sound_dataset[key])
+        key = np.random.choice(sound_dataset.keys()).tostring()
+        filename = np.random.choice(sound_dataset[key]).tostring()
         rate, sound = wavfile.read(filename)
         assert rate == 16000
         sp.play(sound)
@@ -130,7 +130,7 @@ while not rospy.is_shutdown():
         msgs['speaker_pose'] = speaker_pose
         other_pose = PoseStamped()
         other_pose.deserialize(data.pop('base_pose'))
-        msgs['other_pose'] = remote_pose
+        msgs['other_pose'] = other_pose
         
         filename = os.path.join(save_dir, 'sound_{:04d}_{:04d}.wav'.format(iteration,phase))
         wavfile.write(filename, sample_rate, sound)
