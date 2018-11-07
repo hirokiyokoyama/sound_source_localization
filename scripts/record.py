@@ -28,7 +28,7 @@ prefix = rospy.get_param('ssl/remote_prefix')
 turn_angle = rospy.get_param('~turn_angle', 36)
 turn_num = rospy.get_param('~turn_num', 10)
 lift_min = rospy.get_param('~lift_min', 0.)
-lift_max = rospy.get_param('~lift_max', .69)
+lift_max = rospy.get_param('~lift_max', .65)
 lift_num = rospy.get_param('~lift_num', 10)
 
 sound_dataset = get_speech_commands_dataset(sound_dir)
