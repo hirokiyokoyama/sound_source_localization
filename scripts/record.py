@@ -97,7 +97,7 @@ while not rospy.is_shutdown():
         other_dir = np.arctan2(other_pose.position.y-self_pose.position.y,
                                other_pose.position.x-self_pose.position.x)
         omni_base.go_rel(0, 0, other_dir-self_ori)
-        
+        whole_body.move_to_neutral()
     elif role == 'LISTEN':
         sl.start()
     elif role == 'SPEAK':
