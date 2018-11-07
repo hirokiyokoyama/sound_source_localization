@@ -1,4 +1,5 @@
 int32 sequence
+string data
 ---
 int32 sequence
 

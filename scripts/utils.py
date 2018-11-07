@@ -1,6 +1,7 @@
 import rospy
 from sound_source_localization.srv import Synchronize, SynchronizeResponse
 import threading
+import yaml
 
 class FrequencyMeter:
     def __init__(self, N):
@@ -26,6 +27,7 @@ class Synchronizer:
     def __init__(self):
         self._sequence_local = 0
         self._sequence_remote = 0
+        self._data_remote = ''
         self._cond = threading.Condition()
         rospy.Service('/synchronize', Synchronize, self._srv_cb)
         self._srv = rospy.ServiceProxy('/bridged/synchronize', Synchronize)
@@ -35,16 +37,18 @@ class Synchronizer:
     def _srv_cb(self, req):
         with self._cond:
             self._sequence_remote = req.sequence
+            self._data_remote = req.data
             self._cond.notify()
         return SynchronizeResponse(self._sequence_local)
 
-    def next(self):
+    def next(self, data):
         self._sequence_local += 1
-        self._srv(self._sequence_local)
+        self._srv(self._sequence_local, yaml.dump(data))
         with self._cond:
             assert self._sequence_remote <= self._sequence_local, 'Something happened!'
             while self._sequence_remote < self._sequence_local:
                 self._cond.wait()
+            return yaml.load(self._data_remote)
 
     @property
     def sequence(self):

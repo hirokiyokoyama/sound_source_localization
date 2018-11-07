@@ -59,4 +59,3 @@ if __name__ == "__main__":
                                        on_message = on_message)
     while not rospy.is_shutdown():
         ws_remote.run_forever()
-
