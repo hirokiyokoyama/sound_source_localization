@@ -2,83 +2,68 @@
 
 import matplotlib.pyplot as plt
 from audio_common_msgs.msg import AudioData
-import rospy
 import numpy as np
 import tensorflow as tf
-from utils import FrequencyMeter
 from scipy.io import wavfile
+from nets import conv_deconv
+from dataset import get_recorded_dataset
+import sys
 
 CHANNELS = 4
 SAMPLE_RATE = 16000
 BUFFER_SIZE = SAMPLE_RATE/5
 
-class SoundProcessor:
+class Trainer:
     def __init__(self, channels):
         self._graph = tf.Graph()
         with self._graph.as_default():
-            self._inputs = tf.placeholder(tf.int16, shape=[None, channels])
+            self._inputs = tf.placeholder(tf.int16, shape=[None, None, channels])
             inputs = tf.cast(self._inputs, tf.float32) / 32768
-            inputs = tf.transpose(inputs, [1,0])
+            inputs = tf.transpose(inputs, [0,2,1])
+            # [N,C,T]
             spectrogram = tf.contrib.signal.stft(inputs, frame_length=480, frame_step=160)
-            self._spectrogram = tf.transpose(spectrogram, [1,2,0])
+            # [N,C,T,F]
+            self._spectrogram = tf.transpose(spectrogram, [0,2,3,1])
+            # [N,T,F,C]
             self._features = tf.concat([tf.real(self._spectrogram), tf.imag(self._spectrogram)], -1)
-            print self._features
+            self._hidden, self._logits = conv_deconv(self._features)
+            # [N,T,W,W]
+            self._sound_source_map = tf.nn.sigmoid(self._logits)
+            
+            weights = tf.abs(self._spectrogram)
+            weights = tf.reduce_mean(weights, -1, keepdims=True)
+            weights = tf.reduce_mean(weights, -1, keepdims=True) # [N,T,1,1]
             self._sess = tf.Session(graph=self._graph)
 
-    def process(self, inputs):
+            self._init_op = tf.global_variables_initializer()
+
+    def initialize(self):
+        self._sess.run(self._init_op)
+
+    def spectrogram(self, inputs):
         return self._sess.run(self._spectrogram, {self._inputs: inputs})
 
-class SoundListener:
-    def __init__(self, buffer_size, channels):
-        self._freq_meter = FrequencyMeter(100)
-        self._sub = rospy.Subscriber('audio', AudioData, self._cb)
+    def sound_source_map(self, inputs):
+        return self._sess.run(self._sound_source_map, {self._inputs: inputs})
 
-        self._data = np.zeros([buffer_size, channels], dtype=np.int16)
-        self._flag = np.zeros([buffer_size], dtype=np.bool)
-        self._pointer = 0
-        
-    def _cb(self, msg):
-        data = np.fromstring(msg.data, dtype=np.int16)
-        data = data.reshape(-1, self._data.shape[1])
-        begin = self._pointer
-        end = min(self._pointer+data.shape[0], self._data.shape[0])
-        self._data[begin:end,:] = data[:end-begin,:]
-        self._flag[begin:end] = np.abs(data).max() > 16384
-        self._pointer = end
-        if self._pointer == self._data.shape[0]:
-            self._pointer = 0
-        
-        f = self._freq_meter.tap()
-        if f is not None:
-            print '{} Hz'.format(f)
+trainer = Trainer(CHANNELS)
+trainer.initialize()
 
-    def check(self):
-        if np.any(self._flag):
-            return self._data.copy()
-        return None
+dataset = get_recorded_dataset(sys.argv[1:])
+for data in dataset:
+    rate, d = wavfile.read(data['recorded_sound_file'])
+    assert rate == SAMPLE_RATE
+    assert d.shape[1] == CHANNELS
+    m = np.abs(trainer.spectrogram([d])[0])
 
-freq_meter = FrequencyMeter(100)
-sl = SoundListener(BUFFER_SIZE, CHANNELS)
-sp = SoundProcessor(CHANNELS)
+    rate, _d = wavfile.read(data['sound_file'])
+    _d = np.tile(np.expand_dims(_d, -1), [1,CHANNELS])
+    _m = np.abs(trainer.spectrogram([_d])[0])
 
-def show():
-    f = freq_meter.tap()
-    if f is not None:
-        print 'show: {} Hz'.format(f)
-    d = sl.check()
-    if d is None:
-        return
-    spectrogram = sp.process(d)
+    import matplotlib.pyplot as plt
     plt.clf()
-    spec = np.abs(spectrogram[:,:,:3].transpose(1,0,2))
-    spec /= spec.max()
-    plt.imshow(spec, origin='lower')
-    plt.pause(.001)
-
-rospy.init_node('ssl_train')
-
-rate = rospy.Rate(100)
-while not rospy.is_shutdown():
-    #sample_rate, data = wavfile.read('sound_0000_03.wav')
-    show()
-    rate.sleep()
+    
+    plt.plot(m.mean(2).mean(1))
+    plt.plot(_m.mean(2).mean(1))
+    plt.ylim([0,1])
+    plt.pause(1)

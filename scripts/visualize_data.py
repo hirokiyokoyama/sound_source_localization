@@ -9,23 +9,9 @@ from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped
 from sound import SoundPlayer
+from train import Trainer
 from tf import transformations
 import yaml
-
-class SoundProcessor:
-    def __init__(self, channels):
-        self._graph = tf.Graph()
-        with self._graph.as_default():
-            self._inputs = tf.placeholder(tf.int16, shape=[None, channels])
-            inputs = tf.cast(self._inputs, tf.float32) / 32768
-            inputs = tf.transpose(inputs, [1,0])
-            spectrogram = tf.contrib.signal.stft(inputs, frame_length=480, frame_step=160)
-            self._spectrogram = tf.transpose(spectrogram, [1,2,0])
-            self._features = tf.concat([tf.real(self._spectrogram), tf.imag(self._spectrogram)], -1)
-            self._sess = tf.Session(graph=self._graph)
-
-    def process(self, inputs):
-        return self._sess.run(self._spectrogram, {self._inputs: inputs})
 
 def scan2points(scanmsg, posemsg):
     N = len(scanmsg.ranges)
@@ -64,11 +50,10 @@ with open(os.path.join(data_dir, 'other_pose_'+data_num+'.msg'), 'rb') as f:
     rposemsg.deserialize(f.read())
 with open(os.path.join(data_dir, 'meta_'+data_num+'.txt'), 'rb') as f:
     metadata = yaml.load(f.read())
-text = metadata['text']
+text = '"{}"'.format(metadata['text'])
 
-sp = SoundProcessor(channels)
-spectrogram = sp.process(sound)
-plt.figure()
+spectrogram = Trainer(channels).spectrogram([sound])[0]
+plt.figure(figsize=(16,12),dpi=150)
 for i in range(channels):
     plt.subplot(2,channels,i+1)
     spec = np.abs(spectrogram[:,:,i].T)
@@ -98,16 +83,15 @@ p = lposemsg.pose.position
 lx,ly,lz,_ = np.matmul(map2pixel, np.array([p.x, p.y, p.z, 1.]))
 o = lposemsg.pose.orientation
 o = transformations.quaternion_matrix([o.x, o.y, o.z, o.w])[:,0]
-ldx, ldy = np.matmul(map2pixel, o)[:2]
+ldx, ldy = np.matmul(map2pixel, o)[:2]*0.2
 p = rposemsg.pose.position
 rx,ry,rz,_ = np.matmul(map2pixel, np.array([p.x, p.y, p.z, 1.]))
 o = rposemsg.pose.orientation
 o = transformations.quaternion_matrix([o.x, o.y, o.z, o.w])[:,0]
-rdx, rdy = np.matmul(map2pixel, o)[:2]
-xmin, xmax = -15., 15.
-ymin, ymax = -15., 15.
-xmin, ymin = np.matmul(map2pixel, np.array([xmin, ymin, 0., 1.]))[:2]
-xmax, ymax = np.matmul(map2pixel, np.array([xmax, ymax, 0., 1.]))[:2]
+rdx, rdy = np.matmul(map2pixel, o)[:2]*0.2
+cx, cy = (lx+rx)/2, (ly+ry)/2
+xmin, xmax = cx-5/mapmsg.info.resolution, cx+5/mapmsg.info.resolution
+ymin, ymax = cy-5/mapmsg.info.resolution, cy+5/mapmsg.info.resolution
 
 lscanpoints = np.matmul(map2pixel, scan2points(lscanmsg, lposemsg.pose))
 rscanpoints = np.matmul(map2pixel, scan2points(rscanmsg, rposemsg.pose))
@@ -118,8 +102,8 @@ plt.plot(lx, ly, 'ro')
 plt.plot(rx, ry, 'bo')
 plt.scatter(lscanpoints[0], lscanpoints[1], s=1, c='r', linewidth=0)
 plt.scatter(rscanpoints[0], rscanpoints[1], s=1, c='b', linewidth=0)
-plt.arrow(x=lx,y=ly,dx=ldx,dy=ldy)
-plt.arrow(x=rx,y=ry,dx=rdx,dy=rdy)
+plt.arrow(x=lx,y=ly,dx=ldx,dy=ldy,width=.01/mapmsg.info.resolution,color='r')
+plt.arrow(x=rx,y=ry,dx=rdx,dy=rdy,width=.01/mapmsg.info.resolution,color='b')
 plt.text(rx, ry, text)
 plt.xlim([xmin, xmax])
 plt.ylim([ymin, ymax])
