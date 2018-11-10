@@ -3,7 +3,7 @@
 import rospy
 import numpy as np
 from dataset import get_speech_commands_dataset
-from utils import Synchronizer
+from utils import Synchronizer, relative_position
 from sound import SoundListener, SoundPlayer
 from scipy.io import wavfile
 import os
@@ -94,10 +94,8 @@ while not rospy.is_shutdown():
     if role == 'FACE':
         self_pose = rospy.wait_for_message('/laser_2d_pose', PoseWithCovarianceStamped).pose.pose
         other_pose = rospy.wait_for_message(prefix+'/laser_2d_pose', PoseWithCovarianceStamped).pose.pose
-        self_ori = np.arctan2(self_pose.orientation.z, self_pose.orientation.w)*2
-        other_dir = np.arctan2(other_pose.position.y-self_pose.position.y,
-                               other_pose.position.x-self_pose.position.x)
-        omni_base.go_rel(0, 0, other_dir-self_ori)
+        r, theta = relative_position(self_pose, other_pose)
+        omni_base.go_rel(0, 0, theta)
         whole_body.move_to_neutral()
     elif role == 'LISTEN':
         sl.start()

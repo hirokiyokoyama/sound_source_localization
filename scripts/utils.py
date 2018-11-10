@@ -2,6 +2,7 @@ import rospy
 from sound_source_localization.srv import Synchronize, SynchronizeResponse
 import threading
 import yaml
+import numpy as np
 
 class FrequencyMeter:
     def __init__(self, N):
@@ -53,3 +54,15 @@ class Synchronizer:
     @property
     def sequence(self):
         return self._sequence_local
+
+def relative_position(from_pose, to_pose):
+    self_ori = np.arctan2(from_pose.orientation.z, from_pose.orientation.w)*2
+    dy = to_pose.position.y - from_pose.position.y
+    dx = to_pose.position.x - from_pose.position.x
+    other_dir = np.arctan2(dy, dx)
+    
+    return np.hypot(dx,dy), other_dir-self_ori
+
+def axis_vector(q, axis):
+    from tf import transformations
+    return transformations.quaternion_matrix([q.x,q.y,q.z,q.w])[:3,axis]

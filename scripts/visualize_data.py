@@ -52,7 +52,7 @@ with open(os.path.join(data_dir, 'meta_'+data_num+'.txt'), 'rb') as f:
     metadata = yaml.load(f.read())
 text = '"{}"'.format(metadata['text'])
 
-spectrogram = Trainer(channels).spectrogram([sound])[0]
+spectrogram = Trainer(channels).spectrogram([sound/32768.])[0]
 plt.figure(figsize=(16,12),dpi=150)
 for i in range(channels):
     plt.subplot(2,channels,i+1)

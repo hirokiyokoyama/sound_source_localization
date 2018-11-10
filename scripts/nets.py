@@ -1,10 +1,11 @@
 import tensorflow as tf
 slim = tf.contrib.slim
 
-def conv_deconv(x, num_deconv=2, is_training=True):
+def conv_deconv(x, num_deconv=2, initial_channels=5, is_training=True):
     shape = tf.shape(x)
     N = shape[0]
     T = shape[1]
+    c = initial_channels
     if x.get_shape() is None or x.get_shape()[2].value is None:
         raise ValueError('The 3rd dimension (frequency) of inputs must be specified.')
     
@@ -17,18 +18,22 @@ def conv_deconv(x, num_deconv=2, is_training=True):
       with slim.arg_scope([slim.batch_norm], is_training=is_training, **batch_norm_params):
        with slim.arg_scope([slim.max_pool2d], stride=2):
         #[N,T,F,C]
-        net = slim.conv2d(x, 12, [3,6])
-        net = slim.conv2d(net, 18, [3,6])
-        net = slim.conv2d(net, 26, [3,6])
-        net = slim.conv2d(net, 36, [3,6])
+        net = slim.conv2d(x, 16, [3,6])
+        net = slim.conv2d(net, 32, [3,6])
+        net = slim.conv2d(net, 8*c, [3,6])
 
         F = net.get_shape()[2].value
-        hidden = tf.reshape(net, [N,T,F*36])
-        net = tf.reshape(net, [N*T,F,9,4])
-        #[N*T,F,9*c]
+        net = tf.reshape(net, [N*T,F,8,c])
+        #[N*T,F,8,c]
         net = tf.transpose(net, [0,2,1,3])
-        #[N*T,9,F,c]
-        net = tf.reshape(net, [N*T,3,3,F*4])
+        #[N*T,8,F,c] 8-directional information
+        upper_left, lower_right = tf.split(net, [4,4], 1)
+        #[N*T,4,F,c], [N*T,4,F,c]
+        center = tf.zeros([N*T,1,F,c])
+        #[N*T,4,F,c], [N*T,1,F,c], [N*T,4,F,c]
+        net = tf.concat([upper_left, center, lower_right], 1)
+        #[N*T,9,F,c] padded the center (representing self position) with zero
+        net = tf.reshape(net, [N*T,3,3,F*c])
         #[N*T,3,3,F*c]
 
         net = slim.conv2d(net, 2**num_deconv, [1,1], stride=1)
@@ -38,4 +43,4 @@ def conv_deconv(x, num_deconv=2, is_training=True):
         #[N*T,3*2**n,3*2**n,1]
         W = 3*2**num_deconv
         net = tf.reshape(net, [N,T,W,W])
-    return hidden, net
+    return net
