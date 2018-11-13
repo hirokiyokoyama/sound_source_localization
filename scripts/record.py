@@ -42,9 +42,12 @@ if not os.path.exists(save_dir):
     it = 0
 else:
     files = filter(lambda x: x.startswith('sound') and x.endswith('.wav'), os.listdir(save_dir))
-    
-    it = max(int(f.split('_')[1]) for f in files) + 1
-    print '{} already exists. Resuming from iteration {}.'.format(save_dir, it)
+
+    if files:
+        it = max(int(f.split('_')[1]) for f in files) + 1
+        print '{} already exists. Resuming from iteration {}.'.format(save_dir, it)
+    else:
+        it = 0
 
 def tf2pose(tf):
     ps = PoseStamped()
@@ -78,7 +81,7 @@ for a, b in [('A', 'B'), ('B', 'A')]:
             plan += [{a: 'LISTEN', b: 'SPEAK'},
                      {a: 'SAVE',   b: 'HIGHER'}]
         plan += [{a: 'TURN', b: 'LOWEST'}]
-gen = phase_generator(plan, i=it, k=1)
+gen = phase_generator(plan, i=it, n=1)
 
 mapmsg = rospy.wait_for_message('/static_distance_map_ref', OccupancyGrid)
 with open(os.path.join(save_dir, 'map.msg'), 'wb') as f:
