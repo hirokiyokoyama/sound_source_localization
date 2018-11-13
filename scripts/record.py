@@ -63,11 +63,13 @@ def serialize_rosmsg(msg):
     sio.close()
     return ret
 
-def phase_generator(phases, i=0):
-    while True:
+def phase_generator(phases, i=0, n=None):
+    k = 0
+    while n is None or k < n:
         for j, phase in enumerate(phases):
             yield i, j, phase
         i += 1
+        k += 1
 plan = []
 for a, b in [('A', 'B'), ('B', 'A')]:
     plan += [{a: 'FACE', b: 'FACE'}]
@@ -76,7 +78,7 @@ for a, b in [('A', 'B'), ('B', 'A')]:
             plan += [{a: 'LISTEN', b: 'SPEAK'},
                      {a: 'SAVE',   b: 'HIGHER'}]
         plan += [{a: 'TURN', b: 'LOWEST'}]
-gen = phase_generator(plan, i=it)
+gen = phase_generator(plan, i=it, k=1)
 
 mapmsg = rospy.wait_for_message('/static_distance_map_ref', OccupancyGrid)
 with open(os.path.join(save_dir, 'map.msg'), 'wb') as f:
