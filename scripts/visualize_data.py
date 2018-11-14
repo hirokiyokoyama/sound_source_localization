@@ -30,6 +30,7 @@ def scan2points(scanmsg, posemsg):
 data_dir = os.path.abspath(sys.argv[1])
 data_num = sys.argv[2]
 rate, sound = wavfile.read(os.path.join(data_dir, 'sound_'+data_num+'.wav'))
+sound = sound/32768.
 channels = sound.shape[1]
 
 mapmsg = OccupancyGrid()
@@ -49,9 +50,17 @@ with open(os.path.join(data_dir, 'other_pose_'+data_num+'.msg'), 'rb') as f:
     rposemsg.deserialize(f.read())
 with open(os.path.join(data_dir, 'meta_'+data_num+'.txt'), 'rb') as f:
     metadata = yaml.load(f.read())
-text = '"{}"'.format(metadata['text'])
 
-spectrogram = SoundSourceLocalizer(channels).spectrogram(sound/32768.)
+_rate, _sound = wavfile.read(metadata['sound_file'].replace('roboworks', 'yokoyama'))
+if len(_sound.shape) == 1:
+    _sound = np.expand_dims(_sound, 1)
+_sound = _sound/32768.
+matcher = SoundMatcher()
+begin, end, confidence = matcher.match(sound, _sound)
+text = '"{}" ({:.2f})'.format(metadata['text'], confidence)
+
+loc = SoundSourceLocalizer(channels)
+spectrogram = loc.spectrogram(sound[begin:end])
 plt.figure(figsize=(16,12),dpi=150)
 for i in range(channels):
     plt.subplot(2,channels,i+1)

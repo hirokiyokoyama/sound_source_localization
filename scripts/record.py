@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 from dataset import get_speech_commands_dataset
 from sound_source_localization import Synchronizer, relative_position
-from sound_source_localization import SoundListener, SoundPlayer
+from sound_source_localization import SoundListener, ListBuffer, SoundPlayer
 from scipy.io import wavfile
 import os
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
@@ -33,7 +33,8 @@ lift_num = rospy.get_param('~lift_num', 10)
 
 sound_dataset = get_speech_commands_dataset(sound_dir)
 background_noises = sound_dataset.pop('_background_noise_')
-sl = SoundListener(sample_rate*10, channels)
+buf = ListBuffer(sample_rate*10, channels)
+sl = SoundListener(buf)
 sp = SoundPlayer(channels=1, sample_rate=16000) # Sampling rate is 16kHz in speech_commands dataset
 sync = Synchronizer()
 
@@ -103,7 +104,7 @@ while not rospy.is_shutdown():
         omni_base.go_rel(0, 0, theta)
         whole_body.move_to_neutral()
     elif role == 'LISTEN':
-        sl.start()
+        buf.start()
     elif role == 'SPEAK':
         key = np.random.choice(sound_dataset.keys()).tostring()
         filename = np.random.choice(sound_dataset[key]).tostring()
@@ -119,7 +120,7 @@ while not rospy.is_shutdown():
                      'speaker_pose': serialize_rosmsg(speaker_pose),
                      'base_pose': serialize_rosmsg(base_pose)}
     elif role == 'SAVE':
-        sound = sl.stop()
+        sound = buf.stop()
         msgs = {}
         msgs['self_scan'] = rospy.wait_for_message('/hsrb/base_scan', LaserScan)
         msgs['other_scan'] = rospy.wait_for_message(prefix+'/hsrb/base_scan', LaserScan)

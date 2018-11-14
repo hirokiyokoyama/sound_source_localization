@@ -67,6 +67,7 @@ class SoundSourceLocalizer:
             self._global_step = tf.train.create_global_step()
             self._sound_sources = tf.placeholder(tf.float32, shape=[None,None,channels])
             self._positions = tf.placeholder(tf.int32, shape=[None,2])
+            self._frame_step = tf.placeholder_with_default(frame_step)
             sound_sources = tf.transpose(self._sound_sources, [0,2,1])
             spectrogram = tf.contrib.signal.stft(sound_sources,
                                                  frame_length,
@@ -104,16 +105,25 @@ class SoundSourceLocalizer:
     def restore_variables(self, ckpt):
         self._saver.restore(self._sess, ckpt)
 
-    def spectrogram(self, sound):
-        return self._sess.run(self._spectrogram, {self._sound_sources: [sound]})
+    def spectrogram(self, sound, frame_step=None):
+        feed_dict = {self._sound_sources: [sound]}
+        if frame_step is not None:
+            feed_dict[self._frame_step] = frame_step
+        return self._sess.run(self._spectrogram, feed_dict)
 
-    def sound_source_map(self, sound):
-        return self._sess.run(self._sound_source_map, {self._sound_sources: [sound]})
+    def sound_source_map(self, sound, frame_step=None):
+        feed_dict = {self._sound_sources: [sound]}
+        if frame_step is not None:
+            feed_dict[self._frame_step] = frame_step
+        return self._sess.run(self._sound_source_map, feed_dict)
 
     def train(self, sound_sources, positions):
-        _, step, losses = self._sess.run([self._train_op, self._global_step, self._losses],
-                                         {self._sound_sources: sound_sources,
-                                          self._positions: positions})
+        feed_dict = {self._sound_sources: sound_sources,
+                     self._positions: positions}
+        if frame_step is not None:
+            feed_dict[self._frame_step] = frame_step
+        fetch_list = [self._train_op, self._global_step, self._losses]
+        _, step, losses = self._sess.run(fetch_list, feed_dict)
         return step, losses
 
     def save_variables(self, ckpt):
