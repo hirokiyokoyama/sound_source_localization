@@ -25,8 +25,6 @@ def sound_source_gen(dataset, W):
         for i in inds:
             data = dataset[i]
 
-            # ONLY FOR NOW!
-            data['sound_file'] = data['sound_file'].replace('roboworks', 'yokoyama')
             rate, sound = wavfile.read(data['recorded_sound_file'])
             assert rate == SAMPLE_RATE
             assert sound.shape[1] == CHANNELS
