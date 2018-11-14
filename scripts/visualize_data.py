@@ -8,8 +8,7 @@ from scipy.io import wavfile
 from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped
-from sound import SoundPlayer
-from train import Trainer
+from sound_source_localization import SoundPlayer, SoundSourceLocalizer, SoundMatcher
 from tf import transformations
 import yaml
 
@@ -52,7 +51,7 @@ with open(os.path.join(data_dir, 'meta_'+data_num+'.txt'), 'rb') as f:
     metadata = yaml.load(f.read())
 text = '"{}"'.format(metadata['text'])
 
-spectrogram = Trainer(channels).spectrogram(sound/32768.)
+spectrogram = SoundSourceLocalizer(channels).spectrogram(sound/32768.)
 plt.figure(figsize=(16,12),dpi=150)
 for i in range(channels):
     plt.subplot(2,channels,i+1)
