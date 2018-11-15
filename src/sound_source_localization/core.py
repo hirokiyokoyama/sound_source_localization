@@ -67,11 +67,11 @@ class SoundSourceLocalizer:
             self._global_step = tf.train.create_global_step()
             self._sound_sources = tf.placeholder(tf.float32, shape=[None,None,channels])
             self._positions = tf.placeholder(tf.int32, shape=[None,2])
-            self._frame_step = tf.placeholder_with_default(frame_step)
+            self._frame_step = tf.placeholder_with_default(frame_step, shape=[])
             sound_sources = tf.transpose(self._sound_sources, [0,2,1])
             spectrogram = tf.contrib.signal.stft(sound_sources,
                                                  frame_length,
-                                                 frame_step,
+                                                 self._frame_step,
                                                  pad_end=True)
             # [N,C,T,F]
             T = tf.shape(spectrogram)[2]
