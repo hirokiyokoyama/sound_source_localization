@@ -36,7 +36,7 @@ def sound_source_gen(dataset, W, threshold=0.7):
                 confidence = data['confidence']
                 pos = data['source_position']
             else:
-                _rate, _sound = wavfile.read(data['sound_file'].replace('roboworks', 'yokoyama'))
+                _rate, _sound = wavfile.read(data['sound_file'])
                 assert _rate == SAMPLE_RATE
                 if len(_sound.shape) == 1:
                     _sound = np.expand_dims(_sound, 1)
