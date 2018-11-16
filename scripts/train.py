@@ -7,6 +7,7 @@ from scipy.io import wavfile
 from dataset import get_recorded_dataset
 from sound_source_localization import SoundSourceLocalizer, SoundMatcher, axis_vector
 import os, sys
+from concurrent import futures
 
 CHANNELS = 4
 SAMPLE_RATE = 16000
@@ -67,22 +68,46 @@ def sound_source_gen(dataset, W, threshold=0.7):
             if threshold is None or confidence > threshold:
                 yield sound[begin:end,:], pos
 
+def process(data, max_sources, length, begins):
+    sounds = np.zeros([max_sources, length, 4], dtype=np.float32)
+    pos = np.zeros([max_sources, 2], dtype=np.int32)
+    for i, (s, p) in enumerate(data):
+        begin = begins[i]
+        end = begin + s.shape[0]
+        sounds[i,begin:end,:] = s
+        pos[i] = p
+    return sounds, pos
+
+class DummyExecutor:
+    def submit(self, func, *args, **kwargs):
+        class Future:
+            def __init__(self, r):
+                self._result = r
+            def result(self):
+                return self._result
+        return Future(func(*args, **kwargs))
+
 def sound_gen(gen, batch_size=8, max_sources=3):
+    executor = futures.ProcessPoolExecutor()
     while True:
         ns = [np.random.randint(1,max_sources+1) for _ in range(batch_size)]
         data = [gen.next() for _ in range(np.prod(ns))]
         T = max(s.shape[0] for s, p in data)
         
-        sounds = np.zeros([batch_size, max_sources, T*2, 4], dtype=np.float32)
-        pos = np.zeros([batch_size, max_sources, 2], dtype=np.int32)
+        future_data = []
         for b, n in enumerate(ns):
             _data = data[:n]
             data = data[n:]
-            for i, (s, p) in enumerate(_data):
-                begin = np.random.randint(sounds.shape[2] - s.shape[0])
-                end = begin + s.shape[0]
-                sounds[b,i,begin:end,:] = s
-                pos[b,i] = p
+            begins = [np.random.randint(T*2 - s.shape[0]) for s, p in _data]
+            future_data.append(executor.submit(process, _data, max_sources, T*2, begins))
+        sounds = []
+        pos = []
+        for f in future_data:
+            s, p = f.result()
+            sounds.append(s)
+            pos.append(p)
+        sounds = np.stack(sounds, 0)
+        pos = np.stack(pos, 0)
         yield sounds, pos
 
 if __name__=='__main__':
@@ -103,10 +128,11 @@ if __name__=='__main__':
     dataset = get_recorded_dataset(sys.argv[1:])
     gen = sound_gen(sound_source_gen(dataset, trainer.map_size))
     for sounds, positions in gen:
+        print 'a'
         step, losses = trainer.train(sounds, positions)
         print 'loss', losses.mean()
         #from sound import SoundPlayer
         #SoundPlayer().play(np.int16(sounds[:,:,0:1].mean(0)*32768))
         #trainer.plot(sounds, positions)
-        if step % 10 == 0:
+        if step % 1000 == 0:
             trainer.save_variables(os.path.join(MODEL_DIR, 'model'))
