@@ -65,30 +65,38 @@ class SoundSourceLocalizer:
         with self._graph.as_default():
             self._W = 3*2**num_deconv
             self._global_step = tf.train.create_global_step()
-            self._sound_sources = tf.placeholder(tf.float32, shape=[None,None,channels])
-            self._positions = tf.placeholder(tf.int32, shape=[None,2])
+            self._sound_sources = tf.placeholder(tf.float32, shape=[None,None,None,channels])
+            self._positions = tf.placeholder(tf.int32, shape=[None,None,2])
             self._frame_step = tf.placeholder_with_default(frame_step, shape=[])
-            sound_sources = tf.transpose(self._sound_sources, [0,2,1])
+            sound_sources = tf.transpose(self._sound_sources, [0,1,3,2])
             spectrogram = tf.contrib.signal.stft(sound_sources,
                                                  frame_length,
                                                  self._frame_step,
                                                  pad_end=True)
-            # [N,C,T,F]
-            T = tf.shape(spectrogram)[2]
-            envelopes = tf.reduce_mean(tf.reduce_mean(tf.abs(spectrogram), 3), 1)
-            labels = tf.scatter_nd(self._positions, envelopes, [self._W,self._W,T])
-            self._labels = tf.transpose(labels, [2,0,1])
-            # [T,W,W]
-            self._spectrogram = tf.transpose(tf.reduce_sum(spectrogram, 0), [1,2,0])
-            # [T,F,C]
+            # [M,N,C,T,F]
+            shape = tf.shape(spectrogram)
+            T = shape[3]
+            M = shape[0]
+            envelopes = tf.reduce_mean(tf.reduce_mean(tf.abs(spectrogram), 4), 2)
+            cond = lambda i, labels: i < M
+            def body(i, labels):
+                next_labels = tf.scatter_nd(self._positions[i], envelopes[i], [self._W,self._W,T])
+                next_labels = tf.expand_dims(next_labels, 0)
+                labels = tf.concat([labels, next_labels], 0)
+                return i+1, labels
+            _, self._labels = tf.while_loop(cond, body,
+                                            loop_vars=[0, tf.zeros([0,self._W,self._W,T])],
+                                            shape_invariants=[tf.TensorShape([]), tf.TensorShape([None,self._W,self._W,None])])
+            self._labels = tf.transpose(self._labels, [0,3,1,2])
+            # [M,T,W,W]
+            self._spectrogram = tf.transpose(tf.reduce_sum(spectrogram, 1), [0,2,3,1])
+            # [M,T,F,C]
             self._features = tf.concat([tf.real(self._spectrogram), tf.imag(self._spectrogram)], -1)
-            logits = conv_deconv(tf.expand_dims(self._features,0), num_deconv=num_deconv)
-            self._logits = logits[0]
+            self._logits = conv_deconv(self._features, num_deconv=num_deconv)
             self._sound_source_map = tf.nn.sigmoid(self._logits)
-            losses = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=tf.expand_dims(self._labels, 0))
-            self._losses = losses[0]
+            self._losses = tf.nn.sigmoid_cross_entropy_with_logits(logits=self._logits, labels=self._labels)
             opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
-            self._train_op = opt.minimize(tf.reduce_mean(losses), global_step=self._global_step)
+            self._train_op = opt.minimize(tf.reduce_mean(self._losses), global_step=self._global_step)
             
             self._init_op = tf.global_variables_initializer()
             self._saver = tf.train.Saver()
@@ -106,18 +114,18 @@ class SoundSourceLocalizer:
         self._saver.restore(self._sess, ckpt)
 
     def spectrogram(self, sound, frame_step=None):
-        feed_dict = {self._sound_sources: [sound]}
+        feed_dict = {self._sound_sources: [[sound]]}
         if frame_step is not None:
             feed_dict[self._frame_step] = frame_step
-        return self._sess.run(self._spectrogram, feed_dict)
+        return self._sess.run(self._spectrogram, feed_dict)[0]
 
     def sound_source_map(self, sound, frame_step=None):
-        feed_dict = {self._sound_sources: [sound]}
+        feed_dict = {self._sound_sources: [[sound]]}
         if frame_step is not None:
             feed_dict[self._frame_step] = frame_step
-        return self._sess.run(self._sound_source_map, feed_dict)
+        return self._sess.run(self._sound_source_map, feed_dict)[0]
 
-    def train(self, sound_sources, positions):
+    def train(self, sound_sources, positions, frame_step=None):
         feed_dict = {self._sound_sources: sound_sources,
                      self._positions: positions}
         if frame_step is not None:
@@ -131,8 +139,10 @@ class SoundSourceLocalizer:
         
     def plot(self, sound_sources, positions):
         spectrogram, labels = self._sess.run([self._spectrogram, self._labels],
-                                             {self._sound_sources: sound_sources, self._positions: positions})
-        spectrogram = np.abs(spectrogram)
+                                             {self._sound_sources: [sound_sources],
+                                              self._positions: [positions]})
+        spectrogram = np.abs(spectrogram[0])
+        labels = labels[0]
         
         import matplotlib.pyplot as plt
         import matplotlib.animation as animation

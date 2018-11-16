@@ -18,7 +18,8 @@ RESOLUTION = 0.5
 MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'models')
 LEARNING_RATE = 0.001
 
-def sound_source_gen(dataset, W):
+def sound_source_gen(dataset, W, threshold=0.7):
+    matcher = SoundMatcher(FRAME_LENGTH, FRAME_STEP)
     inds = range(len(dataset))
     while True:
         np.random.shuffle(inds)
@@ -35,7 +36,7 @@ def sound_source_gen(dataset, W):
                 confidence = data['confidence']
                 pos = data['source_position']
             else:
-                _rate, _sound = wavfile.read(data['sound_file'])
+                _rate, _sound = wavfile.read(data['sound_file'].replace('roboworks', 'yokoyama'))
                 assert _rate == SAMPLE_RATE
                 if len(_sound.shape) == 1:
                     _sound = np.expand_dims(_sound, 1)
@@ -63,21 +64,25 @@ def sound_source_gen(dataset, W):
                 pos = (x,y)
                 data['source_position'] = pos
 
-            yield sound[begin:end,:], pos
+            if threshold is None or confidence > threshold:
+                yield sound[begin:end,:], pos
 
-def sound_gen(gen, max_sources=3):
+def sound_gen(gen, batch_size=8, max_sources=3):
     while True:
-        n = np.random.randint(1,max_sources+1)
-        data = [gen.next() for _ in range(n)]
+        ns = [np.random.randint(1,max_sources+1) for _ in range(batch_size)]
+        data = [gen.next() for _ in range(np.prod(ns))]
         T = max(s.shape[0] for s, p in data)
         
-        sounds = np.zeros([n, T*2, 4], dtype=np.float32)
-        pos = np.zeros([n, 2], dtype=np.int32)
-        for i, (s, p) in enumerate(data):
-            b = np.random.randint(sounds.shape[1] - s.shape[0])
-            e = b + s.shape[0]
-            sounds[i,b:e,:] = s
-            pos[i] = p
+        sounds = np.zeros([batch_size, max_sources, T*2, 4], dtype=np.float32)
+        pos = np.zeros([batch_size, max_sources, 2], dtype=np.int32)
+        for b, n in enumerate(ns):
+            _data = data[:n]
+            data = data[n:]
+            for i, (s, p) in enumerate(_data):
+                begin = np.random.randint(sounds.shape[2] - s.shape[0])
+                end = begin + s.shape[0]
+                sounds[b,i,begin:end,:] = s
+                pos[b,i] = p
         yield sounds, pos
 
 if __name__=='__main__':
@@ -86,7 +91,6 @@ if __name__=='__main__':
         os.makedirs(MODEL_DIR)
     trainer = SoundSourceLocalizer(CHANNELS, FRAME_LENGTH, FRAME_STEP, NUM_DECONV,
                                    learning_rate = LEARNING_RATE)
-    matcher = SoundMatcher(FRAME_LENGTH, FRAME_STEP)
     
     latest_ckpt = tf.train.latest_checkpoint(MODEL_DIR)
     if latest_ckpt is not None:
@@ -100,7 +104,7 @@ if __name__=='__main__':
     gen = sound_gen(sound_source_gen(dataset, trainer.map_size))
     for sounds, positions in gen:
         step, losses = trainer.train(sounds, positions)
-        print losses.mean()
+        print 'loss', losses.mean()
         #from sound import SoundPlayer
         #SoundPlayer().play(np.int16(sounds[:,:,0:1].mean(0)*32768))
         #trainer.plot(sounds, positions)
