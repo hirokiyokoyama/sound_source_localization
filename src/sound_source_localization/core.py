@@ -125,12 +125,16 @@ class SoundSourceLocalizer:
             feed_dict[self._frame_step] = frame_step
         return self._sess.run(self._sound_source_map, feed_dict)[0]
 
-    def train(self, sound_sources, positions, frame_step=None):
+    def train(self, sound_sources, positions, frame_step=None, return_prediction=False):
         feed_dict = {self._sound_sources: sound_sources,
                      self._positions: positions}
         if frame_step is not None:
             feed_dict[self._frame_step] = frame_step
         fetch_list = [self._train_op, self._global_step, self._losses]
+        if return_prediction:
+            fetch_list.append(self._sound_source_map)
+            _, step, losses, pred = self._sess.run(fetch_list, feed_dict)
+            return step, losses, pred
         _, step, losses = self._sess.run(fetch_list, feed_dict)
         return step, losses
 

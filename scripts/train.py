@@ -2,7 +2,6 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 from scipy.io import wavfile
 from dataset import get_recorded_dataset
 from sound_source_localization import SoundSourceLocalizer, SoundMatcher, axis_vector
@@ -68,7 +67,7 @@ def sound_source_gen(dataset, W, threshold=0.7):
             if threshold is None or confidence > threshold:
                 yield sound[begin:end,:], pos
 
-def process(data, max_sources, length, begins):
+def _process(data, max_sources, length, begins):
     sounds = np.zeros([max_sources, length, 4], dtype=np.float32)
     pos = np.zeros([max_sources, 2], dtype=np.int32)
     for i, (s, p) in enumerate(data):
@@ -86,7 +85,7 @@ class DummyExecutor:
             def result(self):
                 return self._result
         return Future(func(*args, **kwargs))
-
+    
 def sound_gen(gen, batch_size=8, max_sources=3):
     executor = futures.ProcessPoolExecutor()
     while True:
@@ -99,7 +98,7 @@ def sound_gen(gen, batch_size=8, max_sources=3):
             _data = data[:n]
             data = data[n:]
             begins = [np.random.randint(T*2 - s.shape[0]) for s, p in _data]
-            future_data.append(executor.submit(process, _data, max_sources, T*2, begins))
+            future_data.append(executor.submit(_process, _data, max_sources, T*2, begins))
         sounds = []
         pos = []
         for f in future_data:
@@ -111,6 +110,7 @@ def sound_gen(gen, batch_size=8, max_sources=3):
         yield sounds, pos
 
 if __name__=='__main__':
+    import tensorflow as tf
     print MODEL_DIR
     if not os.path.exists(MODEL_DIR):
         os.makedirs(MODEL_DIR)
@@ -127,10 +127,13 @@ if __name__=='__main__':
 
     dataset = get_recorded_dataset(sys.argv[1:])
     gen = sound_gen(sound_source_gen(dataset, trainer.map_size))
+
     for sounds, positions in gen:
-        print 'a'
+        if rospy.is_shutdown():
+            break
         step, losses = trainer.train(sounds, positions)
         print 'loss', losses.mean()
+        
         #from sound import SoundPlayer
         #SoundPlayer().play(np.int16(sounds[:,:,0:1].mean(0)*32768))
         #trainer.plot(sounds, positions)

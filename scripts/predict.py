@@ -32,10 +32,10 @@ while not rospy.is_shutdown():
         continue
     ssmap = ssl.sound_source_map(data, frame_step=frame_length)[0]
 
-    import matplotlib.pyplot as plt
-    plt.clf()
-    plt.imshow(ssmap, origin='lower')
-    plt.pause(0.01)
+    #import matplotlib.pyplot as plt
+    #plt.clf()
+    #plt.imshow(ssmap, origin='lower')
+    #plt.pause(0.01)
 
     grid = OccupancyGrid()
     grid.header.stamp = rospy.Time.now()
