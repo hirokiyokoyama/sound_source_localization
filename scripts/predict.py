@@ -5,10 +5,17 @@ import numpy as np
 from sound_source_localization import SoundSourceLocalizer, SoundListener, QueueBuffer
 from audio_common_msgs.msg import AudioData
 from nav_msgs.msg import OccupancyGrid
+import os
 
 rospy.init_node('ssl_predict')
 
-ckpt = rospy.get_param('~ckpt')
+ckpt = rospy.get_param('~ckpt', None)
+if os.path.isdir(ckpt):
+    import tensorflow as tf
+    _ckpt = tf.train.latest_checkpoint(ckpt)
+    if _ckpt is None:
+        raise ValueError('Cannot find the latest ckpt file in {}'.format(ckpt))
+    ckpt = _ckpt
 channels = rospy.get_param('ssl/channels', 4)
 sample_rate = rospy.get_param('ssl/sample_rate', 16000)
 frame_length = rospy.get_param('ssl/stft_length', 480)

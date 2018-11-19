@@ -68,6 +68,7 @@ class SoundSourceLocalizer:
             self._sound_sources = tf.placeholder(tf.float32, shape=[None,None,None,channels])
             self._positions = tf.placeholder(tf.int32, shape=[None,None,2])
             self._frame_step = tf.placeholder_with_default(frame_step, shape=[])
+            self._is_training = tf.placeholder_with_default(False, shape=[])
             sound_sources = tf.transpose(self._sound_sources, [0,1,3,2])
             spectrogram = tf.contrib.signal.stft(sound_sources,
                                                  frame_length,
@@ -92,7 +93,7 @@ class SoundSourceLocalizer:
             self._spectrogram = tf.transpose(tf.reduce_sum(spectrogram, 1), [0,2,3,1])
             # [M,T,F,C]
             self._features = tf.concat([tf.real(self._spectrogram), tf.imag(self._spectrogram)], -1)
-            self._logits = conv_deconv(self._features, num_deconv=num_deconv)
+            self._logits = conv_deconv(self._features, num_deconv=num_deconv, is_training=self._is_training)
             self._sound_source_map = tf.nn.sigmoid(self._logits)
             self._losses = tf.nn.sigmoid_cross_entropy_with_logits(logits=self._logits, labels=self._labels)
             opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
@@ -127,7 +128,8 @@ class SoundSourceLocalizer:
 
     def train(self, sound_sources, positions, frame_step=None, return_prediction=False):
         feed_dict = {self._sound_sources: sound_sources,
-                     self._positions: positions}
+                     self._positions: positions,
+                     self._is_training: True}
         if frame_step is not None:
             feed_dict[self._frame_step] = frame_step
         fetch_list = [self._train_op, self._global_step, self._losses]

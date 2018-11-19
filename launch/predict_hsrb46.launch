@@ -1,0 +1,7 @@
+<launch>
+  <arg name="model_name"/>
+  <include file="$(find sound_source_localization)/launch/predict.launch">
+    <arg name="robot_hostname" value="hsrb.local"/>
+    <arg name="model_name" value="$(arg model_name)"/>
+  </include>
+</launch>

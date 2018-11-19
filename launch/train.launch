@@ -1,15 +1,18 @@
 <launch>
-  <arg name="device" default="" />
-  <machine name="hsrb46" address="hsrb.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
-  <machine name="hsrb80" address="hsrb80.local" env-loader="/home/hsr-user/env.sh" user="hsr-user" password="hsruser"/>
+  <arg name="channels" default="4"/>
+  <arg name="sample_rate" default="16000"/>
+  <arg name="stft_length" default="480"/>
+  <arg name="resolution" default="0.5"/>
+  <arg name="dataset_name"/>
+  <arg name="model_name"/>
+  
+  <param name="ssl/channels" value="$(arg channels)"/>
+  <param name="ssl/sample_rate" value="$(arg sample_rate)"/>
+  <param name="ssl/stft_length" value="$(arg stft_length)"/>
+  <param name="ssl/resolution" value="$(arg resolution)"/>
 
-  <!-- publish audio data as wav format -->
-  <node machine="hsrb46" name="audio_capture" pkg="audio_capture" type="audio_capture" output="screen">
-    <param name="device" value="" />
-    <param name="format" value="wave" />
-    <param name="channels" value="4" />
-    <param name="depth" value="16" />
-    <param name="sample_rate" value="16000" />
-    <param name="device" value="$(arg device)" />
+  <node name="ssl_train" pkg="sound_source_localization" type="train.py" output="screen">
+    <param name="model_dir" value="$(find sound_source_localization)/data/models/$(arg model_name)"/>
+    <param name="dataset_dir" value="$(find sound_source_localization)/data/$(arg dataset_name)"/>
   </node>
 </launch>

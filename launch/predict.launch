@@ -1,0 +1,34 @@
+<launch>
+  <arg name="robot_hostname" default="hsrb.local"/>
+  <arg name="robot_env-loader" default="/home/hsr-user/env.sh"/>
+  <arg name="robot_user" default="hsr-user"/>
+  <arg name="robot_password" default="hsruser"/>
+  <arg name="channels" default="4"/>
+  <arg name="sample_rate" default="16000"/>
+  <arg name="stft_length" default="480"/>
+  <arg name="resolution" default="0.5"/>
+  <arg name="process_rate" default="5"/>
+  <arg name="model_name"/>
+  
+  <machine name="robot" address="$(arg robot_hostname)" env-loader="$(arg robot_env-loader)" user="$(arg robot_user)" password="$(arg robot_password)"/>
+
+  <param name="ssl/channels" value="$(arg channels)"/>
+  <param name="ssl/sample_rate" value="$(arg sample_rate)"/>
+  <param name="ssl/stft_length" value="$(arg stft_length)"/>
+  <param name="ssl/resolution" value="$(arg resolution)"/>
+
+  <!-- publish audio data as wav format -->
+  <node machine="robot" name="audio_capture" pkg="audio_capture" type="audio_capture">
+    <param name="device" value="" />
+    <param name="format" value="wave" />
+    <param name="channels" value="$(arg channels)" />
+    <param name="depth" value="16" />
+    <param name="sample_rate" value="$(arg sample_rate)" />
+  </node>
+
+  <!-- main node -->
+  <node name="ssl_predict" pkg="sound_source_localization" type="predict.py" output="screen">
+    <param name="ckpt" value="$(find sound_source_localization)/data/models/$(arg model_name)"/>
+    <param name="rate" value="$(arg process_rate)"/>
+  </node>
+</launch>

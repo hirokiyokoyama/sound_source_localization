@@ -5,21 +5,15 @@ import numpy as np
 from scipy.io import wavfile
 from dataset import get_recorded_dataset
 from sound_source_localization import SoundSourceLocalizer, SoundMatcher, axis_vector
-import os, sys
+import os
 from concurrent import futures
 
-CHANNELS = 4
-SAMPLE_RATE = 16000
-BUFFER_SIZE = SAMPLE_RATE/5
-FRAME_LENGTH = 480
 FRAME_STEP = 160
 NUM_DECONV = 2
-RESOLUTION = 0.5
-MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'models')
 LEARNING_RATE = 0.001
 
-def sound_source_gen(dataset, W, threshold=0.7):
-    matcher = SoundMatcher(FRAME_LENGTH, FRAME_STEP)
+def sound_source_gen(dataset, W, resolution, frame_length, threshold=0.7):
+    matcher = SoundMatcher(frame_length, FRAME_STEP)
     inds = range(len(dataset))
     while True:
         np.random.shuffle(inds)
@@ -27,8 +21,6 @@ def sound_source_gen(dataset, W, threshold=0.7):
             data = dataset[i]
 
             rate, sound = wavfile.read(data['recorded_sound_file'])
-            assert rate == SAMPLE_RATE
-            assert sound.shape[1] == CHANNELS
             sound = sound / 32768.
 
             if 'span' in data:
@@ -37,7 +29,6 @@ def sound_source_gen(dataset, W, threshold=0.7):
                 pos = data['source_position']
             else:
                 _rate, _sound = wavfile.read(data['sound_file'])
-                assert _rate == SAMPLE_RATE
                 if len(_sound.shape) == 1:
                     _sound = np.expand_dims(_sound, 1)
                 _sound = _sound / 32768.
@@ -57,8 +48,8 @@ def sound_source_gen(dataset, W, threshold=0.7):
                 theta = np.arctan2(d[1], d[0]) - mic_ori
                 x = dist * np.cos(theta)
                 y = dist * np.sin(theta)
-                x = W/2 + int(np.round(x/RESOLUTION))
-                y = W/2 + int(np.round(y/RESOLUTION))
+                x = W/2 + int(np.round(x/resolution))
+                y = W/2 + int(np.round(y/resolution))
                 x = min(max(x, 0), W-1)
                 y = min(max(y, 0), W-1)
                 pos = (x,y)
@@ -111,13 +102,23 @@ def sound_gen(gen, batch_size=8, max_sources=3):
 
 if __name__=='__main__':
     import tensorflow as tf
-    print MODEL_DIR
-    if not os.path.exists(MODEL_DIR):
-        os.makedirs(MODEL_DIR)
-    trainer = SoundSourceLocalizer(CHANNELS, FRAME_LENGTH, FRAME_STEP, NUM_DECONV,
+    import rospy
+
+    rospy.init_node('ssl_train', disable_signals=True) # just to get parameters
+    channels = rospy.get_param('ssl/channels')
+    #sample_rate = rospy.get_param('ssl/sample_rate')
+    frame_length = rospy.get_param('ssl/stft_length')
+    resolution = rospy.get_param('ssl/resolution')
+    model_dir = rospy.get_param('~model_dir')
+    dataset_dir = rospy.get_param('~dataset_dir')
+    
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+        
+    trainer = SoundSourceLocalizer(channels, frame_length, FRAME_STEP, NUM_DECONV,
                                    learning_rate = LEARNING_RATE)
     
-    latest_ckpt = tf.train.latest_checkpoint(MODEL_DIR)
+    latest_ckpt = tf.train.latest_checkpoint(model_dir)
     if latest_ckpt is not None:
         print 'Restoring from %s.' % latest_ckpt
         trainer.restore_variables(latest_ckpt)
@@ -125,8 +126,12 @@ if __name__=='__main__':
         print 'Starting with a new model.'
         trainer.initialize_variables()
 
-    dataset = get_recorded_dataset(sys.argv[1:])
-    gen = sound_gen(sound_source_gen(dataset, trainer.map_size))
+    files = os.listdir(os.path.abspath(dataset_dir))
+    if all('sound' not in f for f in files):
+        dirs = filter(os.path.isdir, files)
+        dataset_dir = [os.path.join(dataset_dir, d) for d in dirs]
+    dataset = get_recorded_dataset(dataset_dir)
+    gen = sound_gen(sound_source_gen(dataset, trainer.map_size, resolution, frame_length))
 
     for sounds, positions in gen:
         if rospy.is_shutdown():
@@ -138,4 +143,4 @@ if __name__=='__main__':
         #SoundPlayer().play(np.int16(sounds[:,:,0:1].mean(0)*32768))
         #trainer.plot(sounds, positions)
         if step % 1000 == 0:
-            trainer.save_variables(os.path.join(MODEL_DIR, 'model'))
+            trainer.save_variables(os.path.join(model_dir, 'model'))

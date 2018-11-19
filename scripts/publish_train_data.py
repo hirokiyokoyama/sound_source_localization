@@ -7,20 +7,23 @@ from audio_common_msgs.msg import AudioData
 from visualization_msgs.msg import MarkerArray, Marker
 from dataset import get_recorded_dataset
 from train import sound_source_gen, sound_gen
-from train import SAMPLE_RATE, NUM_DECONV, RESOLUTION
+from train import NUM_DECONV
 MAP_SIZE = 3*2**NUM_DECONV
 MSG_FREQ = 100
 
 if __name__=='__main__':
     rospy.init_node('ssl_train_data_pub')
+    sample_rate = rospy.get_param('ssl/sample_rate')
+    frame_length = rospy.get_param('ssl/stft_length')
+    resolution = rospy.get_param('ssl/resolution')
     dataset_dir = rospy.get_param('~dataset_dir')
     dataset = get_recorded_dataset(dataset_dir)
-    gen = sound_gen(sound_source_gen(dataset, MAP_SIZE), batch_size=1)
+    gen = sound_gen(sound_source_gen(dataset, MAP_SIZE, resolution, frame_length), batch_size=1)
 
     audio_pub = rospy.Publisher('train_sound', AudioData, queue_size=100)
     marker_pub = rospy.Publisher('train_ground_truth', MarkerArray, queue_size=1)
-    assert SAMPLE_RATE % MSG_FREQ == 0
-    frames_per_msg = SAMPLE_RATE / MSG_FREQ
+    assert sample_rate % MSG_FREQ == 0
+    frames_per_msg = sample_rate / MSG_FREQ
     
     for sounds, positions in gen:
         if rospy.is_shutdown():
@@ -46,12 +49,12 @@ if __name__=='__main__':
                 marker.type = Marker.SPHERE
                 marker.ns = 'sound_sources'
                 marker.id = i
-                marker.pose.position.x = (pos[0] - MAP_SIZE/2. + .5) * RESOLUTION
-                marker.pose.position.y = (pos[1] - MAP_SIZE/2. + .5) * RESOLUTION
+                marker.pose.position.x = (pos[0] - MAP_SIZE/2. + .5) * resolution
+                marker.pose.position.y = (pos[1] - MAP_SIZE/2. + .5) * resolution
                 marker.pose.orientation.w = 1.
-                marker.scale.x = scale*5 * RESOLUTION
-                marker.scale.y = scale*5 * RESOLUTION
-                marker.scale.z = scale*5 * RESOLUTION
+                marker.scale.x = scale*5 * resolution
+                marker.scale.y = scale*5 * resolution
+                marker.scale.z = scale*5 * resolution
                 marker.color.g = 1.
                 marker.color.a = .5
                 markers.markers.append(marker)

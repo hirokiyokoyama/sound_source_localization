@@ -1,13 +1,15 @@
 <launch>
   <arg name="channels" default="4"/>
   <arg name="sample_rate" default="16000"/>
+  <arg name="stft_length" default="480"/>
+  <arg name="resolution" default="0.5"/>
   <arg name="dataset_name"/>
   <arg name="model_name"/>
   
   <param name="ssl/channels" value="$(arg channels)"/>
   <param name="ssl/sample_rate" value="$(arg sample_rate)"/>
-  <param name="ssl/stft_length" value="480"/>
-  <param name="ssl/resolution" value="0.5"/>
+  <param name="ssl/stft_length" value="$(arg stft_length)"/>
+  <param name="ssl/resolution" value="$(arg resolution)"/>
 
   <node name="ssl_test_pub" pkg="sound_source_localization" type="publish_train_data.py">
     <param name="dataset_dir" value="$(find sound_source_localization)/data/$(arg dataset_name)"/>
