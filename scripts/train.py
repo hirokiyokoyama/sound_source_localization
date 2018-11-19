@@ -11,6 +11,8 @@ from concurrent import futures
 FRAME_STEP = 160
 NUM_DECONV = 2
 LEARNING_RATE = 0.001
+BATCH_SIZE = 8
+MAX_SOURCES = 3
 
 def sound_source_gen(dataset, W, resolution, frame_length, threshold=0.7):
     matcher = SoundMatcher(frame_length, FRAME_STEP)
@@ -131,7 +133,8 @@ if __name__=='__main__':
         dirs = filter(os.path.isdir, files)
         dataset_dir = [os.path.join(dataset_dir, d) for d in dirs]
     dataset = get_recorded_dataset(dataset_dir)
-    gen = sound_gen(sound_source_gen(dataset, trainer.map_size, resolution, frame_length))
+    gen = sound_gen(sound_source_gen(dataset, trainer.map_size, resolution, frame_length),
+                    batch_size=BATCH_SIZE, max_sources=MAX_SOURCES)
 
     for sounds, positions in gen:
         if rospy.is_shutdown():
