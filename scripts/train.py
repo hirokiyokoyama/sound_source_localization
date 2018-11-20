@@ -130,8 +130,8 @@ if __name__=='__main__':
 
     files = os.listdir(os.path.abspath(dataset_dir))
     if all('sound' not in f for f in files):
-        dirs = filter(os.path.isdir, files)
-        dataset_dir = [os.path.join(dataset_dir, d) for d in dirs]
+        dataset_dir = [os.path.join(dataset_dir, f) for f in files]
+        dataset_dir = filter(os.path.isdir, dataset_dir)
     dataset = get_recorded_dataset(dataset_dir)
     gen = sound_gen(sound_source_gen(dataset, trainer.map_size, resolution, frame_length),
                     batch_size=BATCH_SIZE, max_sources=MAX_SOURCES)

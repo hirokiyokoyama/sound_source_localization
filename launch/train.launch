@@ -5,13 +5,15 @@
   <arg name="resolution" default="0.5"/>
   <arg name="dataset_name"/>
   <arg name="model_name"/>
+  <arg name="gpu" default="0"/>
   
   <param name="ssl/channels" value="$(arg channels)"/>
   <param name="ssl/sample_rate" value="$(arg sample_rate)"/>
   <param name="ssl/stft_length" value="$(arg stft_length)"/>
   <param name="ssl/resolution" value="$(arg resolution)"/>
+  <env name="CUDA_VISIBLE_DEVICES" value="$(arg gpu)"/>
 
-  <node name="ssl_train" pkg="sound_source_localization" type="train.py" output="screen">
+  <node name="ssl_train_gpu$(arg gpu)" pkg="sound_source_localization" type="train.py" output="screen">
     <param name="model_dir" value="$(find sound_source_localization)/data/models/$(arg model_name)"/>
     <param name="dataset_dir" value="$(find sound_source_localization)/data/$(arg dataset_name)"/>
   </node>
