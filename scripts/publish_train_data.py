@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-import sys
+import os
 import numpy as np
 from audio_common_msgs.msg import AudioData
 from visualization_msgs.msg import MarkerArray, Marker
@@ -17,6 +17,11 @@ if __name__=='__main__':
     frame_length = rospy.get_param('ssl/stft_length')
     resolution = rospy.get_param('ssl/resolution')
     dataset_dir = rospy.get_param('~dataset_dir')
+
+    files = os.listdir(os.path.abspath(dataset_dir))
+    if all('sound' not in f for f in files):
+        dataset_dir = [os.path.join(dataset_dir, f) for f in files]
+        dataset_dir = filter(os.path.isdir, dataset_dir)
     dataset = get_recorded_dataset(dataset_dir)
     gen = sound_gen(sound_source_gen(dataset, MAP_SIZE, resolution, frame_length), batch_size=1)
 
@@ -33,6 +38,12 @@ if __name__=='__main__':
         
         rate = rospy.Rate(MSG_FREQ)
         sound = np.int16(sounds.mean(0) * 32768)
+
+        delete_all = Marker()
+        delete_all.action = Marker.DELETEALL
+        delete_all.ns = 'sound_sources'
+        delete_all = MarkerArray(markers=[delete_all])
+        
         for t in xrange((sound.shape[0]+frames_per_msg-1)/frames_per_msg):
             begin = t*frames_per_msg
             end = min((t+1)*frames_per_msg, sound.shape[0])
@@ -61,3 +72,4 @@ if __name__=='__main__':
             marker_pub.publish(markers)
             
             rate.sleep()
+            marker_pub.publish(delete_all)

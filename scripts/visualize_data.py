@@ -51,7 +51,7 @@ with open(os.path.join(data_dir, 'other_pose_'+data_num+'.msg'), 'rb') as f:
 with open(os.path.join(data_dir, 'meta_'+data_num+'.txt'), 'rb') as f:
     metadata = yaml.load(f.read())
 
-_rate, _sound = wavfile.read(metadata['sound_file'].replace('roboworks', 'yokoyama'))
+_rate, _sound = wavfile.read(metadata['sound_file'])
 if len(_sound.shape) == 1:
     _sound = np.expand_dims(_sound, 1)
 _sound = _sound/32768.
