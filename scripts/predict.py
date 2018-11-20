@@ -22,7 +22,9 @@ frame_length = rospy.get_param('ssl/stft_length', 480)
 resolution = rospy.get_param('ssl/resolution', 0.5)
 localize_rate = rospy.get_param('~rate', 5)
 
-ssl = SoundSourceLocalizer(channels)
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+ssl = SoundSourceLocalizer(channels, session_config=config)
 buf = QueueBuffer(frame_length, channels)
 sl = SoundListener(buf)
 ssl.restore_variables(ckpt)
@@ -31,8 +33,8 @@ pub = rospy.Publisher('sound_source_map', OccupancyGrid, queue_size=1)
 rate = rospy.Rate(localize_rate)
 while not rospy.is_shutdown():
     rate.sleep()
-    #if pub.get_num_connections() == 0:
-    #    continue
+    if pub.get_num_connections() == 0:
+        continue
 
     data = buf.get_latest(frame_length)
     if data.shape[0] < frame_length:

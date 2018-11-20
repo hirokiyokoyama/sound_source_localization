@@ -32,7 +32,7 @@ Acquired data will be saved in PACKAGE_DIR/data/foo (in cases where dataset_name
 
 ### Training
 ```
-roslaunch sound_source_localization train.launch dataset_name:=foo model_name:=bar
+roslaunch sound_source_localization train.launch dataset_name:=foo model_name:=bar gpu:=0
 ```
 Dataset will be read from PACKAGE_DIR/data/foo, and trained model will be saved in PACKAGE_DIR/data/bar.
 The names of ckpt files will look like 'model-1000.data-00000-of-00001'.

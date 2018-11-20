@@ -3,7 +3,7 @@ import numpy as np
 from nets import conv_deconv
 
 class SoundMatcher:
-    def __init__(self, frame_length=480, frame_step=160):
+    def __init__(self, frame_length=480, frame_step=160, session_config=None):
         self._frame_step = frame_step
         
         self._graph = tf.Graph()
@@ -30,7 +30,7 @@ class SoundMatcher:
                                   padding = 'VALID')[0,:,0,0]
             b = tf.reduce_sum(pattern**2)
             self._correlation = corr/tf.sqrt(a*b)
-        self._sess = tf.Session(graph=self._graph)
+        self._sess = tf.Session(graph=self._graph, config=session_config)
 
     def match(self, sound, pattern):
         corr = self._sess.run(self._correlation,
@@ -60,7 +60,7 @@ class SoundMatcher:
 
 class SoundSourceLocalizer:
     def __init__(self, channels, frame_length=480, frame_step=160, num_deconv=2,
-                 learning_rate = 0.001):
+                 learning_rate = 0.001, session_config = None):
         self._graph = tf.Graph()
         with self._graph.as_default():
             self._W = 3*2**num_deconv
@@ -102,7 +102,7 @@ class SoundSourceLocalizer:
             self._init_op = tf.global_variables_initializer()
             self._saver = tf.train.Saver()
 
-        self._sess = tf.Session(graph=self._graph)
+        self._sess = tf.Session(graph=self._graph, config=session_config)
 
     @property
     def map_size(self):
