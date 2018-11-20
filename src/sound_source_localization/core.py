@@ -102,9 +102,10 @@ class SoundSourceLocalizer:
             NO_SOUND_DISCOUNT = 0.2
             loss_weights = tf.reduce_max(tf.reduce_max(self._labels, 2, keepdims=True), 3, keepdims=True)
             loss_weights = loss_weights * (1-NO_SOUND_DISCOUNT) + NO_SOUND_DISCOUNT
-            self._losses = self._losses * loss_weights
+            mean_losses = self._losses * loss_weights
+            mean_losses = tf.reduce_sum(mean_losses, 1, keepdims=True) / tf.reduce_sum(loss_weights, 1, keepdims=True)
             opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
-            self._train_op = opt.minimize(tf.reduce_mean(self._losses), global_step=self._global_step)
+            self._train_op = opt.minimize(tf.reduce_mean(mean_losses), global_step=self._global_step)
             
             self._init_op = tf.global_variables_initializer()
             self._saver = tf.train.Saver()
