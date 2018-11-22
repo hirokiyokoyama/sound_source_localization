@@ -95,8 +95,10 @@ class SoundSourceLocalizer:
             self._features = tf.concat([tf.real(self._spectrogram), tf.imag(self._spectrogram)], -1)
             self._logits = conv_deconv(self._features, num_deconv=num_deconv, is_training=self._is_training)
             # [M,T,W,W]
-            self._sound_source_map = tf.nn.sigmoid(self._logits)
-            self._losses = tf.nn.sigmoid_cross_entropy_with_logits(logits=self._logits, labels=self._labels)
+            #self._sound_source_map = tf.nn.sigmoid(self._logits)
+            self._sound_source_map = tf.exp(self._logits)
+            #self._losses = tf.nn.sigmoid_cross_entropy_with_logits(logits=self._logits, labels=self._labels)
+            self._losses = tf.square(self._logits - tf.log(self._labels))
             # discount losses at time steps where there are no sounds
             # NO_SOUND_DISCOUNT = 1. means no discount
             NO_SOUND_DISCOUNT = 0.2

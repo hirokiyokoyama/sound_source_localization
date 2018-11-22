@@ -25,7 +25,7 @@ localize_rate = rospy.get_param('~rate', 5)
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 ssl = SoundSourceLocalizer(channels, session_config=config)
-buf = QueueBuffer(frame_length, channels)
+buf = QueueBuffer(frame_length*15, channels)
 sl = SoundListener(buf)
 ssl.restore_variables(ckpt)
 pub = rospy.Publisher('sound_source_map', OccupancyGrid, queue_size=1)
@@ -36,10 +36,10 @@ while not rospy.is_shutdown():
     if pub.get_num_connections() == 0:
         continue
 
-    data = buf.get_latest(frame_length)
+    data = buf.get_latest(frame_length*15)
     if data.shape[0] < frame_length:
         continue
-    ssmap = ssl.sound_source_map(data, frame_step=frame_length)[0]
+    ssmap = ssl.sound_source_map(data/32768., frame_step=160)[0]
 
     #import matplotlib.pyplot as plt
     #plt.clf()
