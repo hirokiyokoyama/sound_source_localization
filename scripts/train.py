@@ -141,7 +141,7 @@ if __name__=='__main__':
         if rospy.is_shutdown():
             break
         step, losses = trainer.train(sounds, positions)
-        print 'loss', losses.mean()
+        print '[%d] loss=%f' % (step, losses.mean())
         
         #from sound import SoundPlayer
         #SoundPlayer().play(np.int16(sounds[:,:,0:1].mean(0)*32768))
