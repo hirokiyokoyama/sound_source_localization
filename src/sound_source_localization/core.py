@@ -73,7 +73,7 @@ class SoundSourceLocalizer:
             self._is_training = tf.placeholder_with_default(False, shape=[])
             sound_sources = tf.transpose(self._sound_sources, [0,1,3,2])
             window_fn = functools.partial(tf.contrib.signal.hann_window, periodic=True)
-            spectrogram = tf.contrib.signal.stft(sound_sources),
+            spectrogram = tf.contrib.signal.stft(sound_sources,
                                                  frame_length,
                                                  self._frame_step,
                                                  window_fn = window_fn,
