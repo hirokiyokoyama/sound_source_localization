@@ -2,6 +2,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 from nets import conv_deconv
+import functools
 
 class SoundMatcher:
     def __init__(self, frame_length=480, frame_step=160, session_config=None):
@@ -71,12 +72,12 @@ class SoundSourceLocalizer:
             self._frame_step = tf.placeholder_with_default(frame_step, shape=[])
             self._is_training = tf.placeholder_with_default(False, shape=[])
             sound_sources = tf.transpose(self._sound_sources, [0,1,3,2])
-            window_fn = lambda n: tf.contrib.signal.hann_window(n, periodic=True)
-            spectrogram = tf.contrib.signal.stft(sound_sources / tf.reduce_sum(window_fn(frame_length)),
+            window_fn = functools.partial(tf.contrib.signal.hann_window, periodic=True)
+            spectrogram = tf.contrib.signal.stft(sound_sources),
                                                  frame_length,
                                                  self._frame_step,
                                                  window_fn = window_fn,
-                                                 pad_end=True)
+                                                 pad_end=True) / tf.reduce_sum(window_fn(frame_length, dtype=tf.complex64)
             # [M,N,C,T,F]
             shape = tf.shape(spectrogram)
             T = shape[3]
