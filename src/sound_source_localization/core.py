@@ -77,7 +77,7 @@ class SoundSourceLocalizer:
                                                  frame_length,
                                                  self._frame_step,
                                                  window_fn = window_fn,
-                                                 pad_end=True) / tf.reduce_sum(window_fn(frame_length, dtype=tf.float64))
+                                                 pad_end=True) / tf.cast(tf.reduce_sum(window_fn(frame_length, dtype=tf.float64)), tf.complex64)
             # [M,N,C,T,F]
             shape = tf.shape(spectrogram)
             T = shape[3]
