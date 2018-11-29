@@ -1,3 +1,4 @@
+from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 from nets import conv_deconv
@@ -70,9 +71,11 @@ class SoundSourceLocalizer:
             self._frame_step = tf.placeholder_with_default(frame_step, shape=[])
             self._is_training = tf.placeholder_with_default(False, shape=[])
             sound_sources = tf.transpose(self._sound_sources, [0,1,3,2])
-            spectrogram = tf.contrib.signal.stft(sound_sources,
+            window_fn = lambda n: tf.contrib.signal.hann_window(n, periodic=True)
+            spectrogram = tf.contrib.signal.stft(sound_sources / tf.reduce_sum(window_fn(frame_length)),
                                                  frame_length,
                                                  self._frame_step,
+                                                 window_fn = window_fn,
                                                  pad_end=True)
             # [M,N,C,T,F]
             shape = tf.shape(spectrogram)
@@ -85,11 +88,18 @@ class SoundSourceLocalizer:
                 next_labels = tf.expand_dims(next_labels, 0)
                 labels = tf.concat([labels, next_labels], 0)
                 return i+1, labels
-            _, self._labels = tf.while_loop(cond, body,
-                                            loop_vars=[0, tf.zeros([0,self._W,self._W,T])],
-                                            shape_invariants=[tf.TensorShape([]), tf.TensorShape([None,self._W,self._W,None])])
-            self._labels = tf.transpose(self._labels, [0,3,1,2])
+            _, labels = tf.while_loop(cond, body,
+                                      loop_vars=[0, tf.zeros([0,self._W,self._W,T])],
+                                      shape_invariants=[tf.TensorShape([]), tf.TensorShape([None,self._W,self._W,None])])
+            labels = tf.transpose(labels, [0,3,1,2])
             # [M,T,W,W]
+            with tf.control_dependencies([tf.print(tf.reduce_max(labels))]):
+                labels = tf.identity(labels)
+            # blur the labels
+            labels = tf.reshape(labels, [M*T,self._W,self._W,1])
+            kernel = tf.ones([2,2,1,1], tf.float32)
+            labels = tf.nn.conv2d(labels, kernel, [1,1,1,1], 'SAME')
+            self._labels = tf.reshape(labels, [M,T,self._W,self._W])
             self._spectrogram = tf.transpose(tf.reduce_sum(spectrogram, 1), [0,2,3,1])
             # [M,T,F,C]
             self._features = tf.concat([tf.real(self._spectrogram), tf.imag(self._spectrogram)], -1)
