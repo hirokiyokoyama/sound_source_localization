@@ -94,11 +94,9 @@ class SoundSourceLocalizer:
                                       shape_invariants=[tf.TensorShape([]), tf.TensorShape([None,self._W,self._W,None])])
             labels = tf.transpose(labels, [0,3,1,2])
             # [M,T,W,W]
-            with tf.control_dependencies([tf.print(tf.reduce_max(labels))]):
-                labels = tf.identity(labels)
             # blur the labels
             labels = tf.reshape(labels, [M*T,self._W,self._W,1])
-            kernel = tf.ones([2,2,1,1], tf.float32)
+            kernel = tf.ones([2,2,1,1], tf.float32)/(2*2)
             labels = tf.nn.conv2d(labels, kernel, [1,1,1,1], 'SAME')
             self._labels = tf.reshape(labels, [M,T,self._W,self._W])
             self._spectrogram = tf.transpose(tf.reduce_sum(spectrogram, 1), [0,2,3,1])
@@ -112,7 +110,7 @@ class SoundSourceLocalizer:
             self._losses = tf.square(self._logits - tf.log(self._labels+0.01))
             # discount losses at time steps where there are no sounds
             # NO_SOUND_DISCOUNT = 1. means no discount
-            NO_SOUND_DISCOUNT = 0.2
+            NO_SOUND_DISCOUNT = 0.0001
             #loss_weights = tf.reduce_max(tf.reduce_max(self._labels, 2, keepdims=True), 3, keepdims=True)
             loss_weights = self._labels
             loss_weights = loss_weights * (1-NO_SOUND_DISCOUNT) + NO_SOUND_DISCOUNT

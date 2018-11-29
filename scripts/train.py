@@ -63,6 +63,7 @@ def sound_source_gen(dataset, W, resolution, frame_length, threshold=0.7):
 def _process(data, max_sources, length, begins):
     sounds = np.zeros([max_sources, length, 4], dtype=np.float32)
     pos = np.zeros([max_sources, 2], dtype=np.int32)
+
     for i, (s, p) in enumerate(data):
         begin = begins[i]
         end = begin + s.shape[0]
