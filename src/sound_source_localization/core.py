@@ -82,7 +82,7 @@ class SoundSourceLocalizer:
             shape = tf.shape(spectrogram)
             T = shape[3]
             M = shape[0]
-            envelopes = tf.reduce_mean(tf.reduce_mean(tf.abs(spectrogram), 4), 2)
+            envelopes = tf.reduce_mean(tf.sqrt(tf.reduce_sum(tf.abs(spectrogram)**2, 4)), 2)
             cond = lambda i, labels: i < M
             def body(i, labels):
                 next_labels = tf.scatter_nd(self._positions[i], envelopes[i], [self._W,self._W,T])
