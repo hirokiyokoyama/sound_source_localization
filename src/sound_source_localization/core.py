@@ -110,7 +110,7 @@ class SoundSourceLocalizer:
             THRESHOLD = 0.2
             valid_times = tf.reduce_max(tf.reshape(self._labels, [M,T,self._W*self._W]), 2) > THRESHOLD
             valid_logits = tf.boolean_mask(self._logits, valid_times)
-            valid_labels = tf.bookean_mask(self._labels, valid_times)
+            valid_labels = tf.boolean_mask(self._labels, valid_times)
             # [m,W,W]
             self._losses = tf.square(valid_logits - tf.log(valid_labels+0.01))
             # discount losses at time steps where there are no sounds
