@@ -107,12 +107,17 @@ class SoundSourceLocalizer:
             #self._sound_source_map = tf.nn.sigmoid(self._logits)
             self._sound_source_map = tf.exp(self._logits)
             #self._losses = tf.nn.sigmoid_cross_entropy_with_logits(logits=self._logits, labels=self._labels)
-            self._losses = tf.square(self._logits - tf.log(self._labels+0.01))
+            THRESHOLD = 0.2
+            valid_times = tf.reduce_max(tf.reshape(self._labels, [M,T,W*W]), 2) > THRESHOLD
+            valid_logits = tf.boolean_mask(self._logits, valid_times)
+            valid_labels = tf.bookean_mask(self._labels, valid_times)
+            # [m,W,W]
+            self._losses = tf.square(valid_logits - tf.log(valid_labels+0.01))
             # discount losses at time steps where there are no sounds
             # NO_SOUND_DISCOUNT = 1. means no discount
-            NO_SOUND_DISCOUNT = 0.0001
+            NO_SOUND_DISCOUNT = 1.
             #loss_weights = tf.reduce_max(tf.reduce_max(self._labels, 2, keepdims=True), 3, keepdims=True)
-            loss_weights = self._labels
+            loss_weights = valid_labels
             loss_weights = loss_weights * (1-NO_SOUND_DISCOUNT) + NO_SOUND_DISCOUNT
             mean_losses = self._losses * loss_weights
             #mean_losses = tf.reduce_sum(mean_losses, 1, keepdims=True) / tf.reduce_sum(loss_weights, 1, keepdims=True)
