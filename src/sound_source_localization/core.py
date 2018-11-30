@@ -107,7 +107,7 @@ class SoundSourceLocalizer:
             #self._sound_source_map = tf.nn.sigmoid(self._logits)
             self._sound_source_map = tf.exp(self._logits)
             #self._losses = tf.nn.sigmoid_cross_entropy_with_logits(logits=self._logits, labels=self._labels)
-            THRESHOLD = 0.2
+            THRESHOLD = 0.1
             valid_times = tf.reduce_max(tf.reshape(self._labels, [M,T,self._W*self._W]), 2) > THRESHOLD
             valid_logits = tf.boolean_mask(self._logits, valid_times)
             valid_labels = tf.boolean_mask(self._labels, valid_times)
